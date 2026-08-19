@@ -3,6 +3,7 @@ services:
     name: kvartira-uz
     env: node
     plan: free
+    region: frankfurt
     buildCommand: npm install && npm run build
     startCommand: node start-all.js
     envVars:
@@ -16,6 +17,8 @@ services:
         value: https://by-hamroh.uz
       - key: DATA_DIR
         value: /opt/render/project/src/data
+      - key: NODE_VERSION
+        value: 20.19.0
     disk:
       name: kvartira-data
       mountPath: /opt/render/project/src/data
