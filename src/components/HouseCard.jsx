@@ -1,94 +1,108 @@
 import { Link } from 'react-router-dom';
 import { MapPin, Bed, Maximize, Building, Tag } from 'lucide-react';
+import { haptic } from '../telegram';
 
 const FALLBACK_IMG = 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=400';
 
 export default function HouseCard({ house }) {
   const formatPrice = (price, type) => {
     const p = Number(price) || 0;
-    if (type === 'ijara') {
-      return `${p.toLocaleString()} so'm/oy`;
-    }
-    return `${p.toLocaleString()} so'm`;
+    return type === 'ijara'
+      ? `${p.toLocaleString()} so'm/oy`
+      : `${p.toLocaleString()} so'm`;
   };
 
   const statusColors = {
     yangi: 'bg-green-100 text-green-700',
     foydalanilgan: 'bg-yellow-100 text-yellow-700',
-    qurilayotgan: 'bg-blue-100 text-blue-700'
+    qurilayotgan: 'bg-blue-100 text-blue-700',
+  };
+  const statusLabels = {
+    yangi: 'Yangi',
+    foydalanilgan: 'Foydalanilgan',
+    qurilayotgan: 'Qurilayotgan',
   };
 
-  const typeColors = {
-    sotish: 'bg-blue-600',
-    ijara: 'bg-purple-600'
-  };
-
-  const images = house.images && house.images.length ? house.images : [FALLBACK_IMG];
+  const images = house.images?.length ? house.images : [FALLBACK_IMG];
 
   return (
-    <Link to={`/house/${house.id}`} className="group block">
-      <div className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden transform hover:-translate-y-1">
-        <div className="relative h-56 overflow-hidden">
+    <Link
+      to={`/house/${house.id}`}
+      className="block active:scale-[0.98] transition-transform duration-100"
+      onClick={() => haptic('light')}
+    >
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        {/* Rasm */}
+        <div className="relative h-44 overflow-hidden bg-gray-100">
           <img
             src={images[0]}
             alt={house.title}
-            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+            className="w-full h-full object-cover"
+            loading="lazy"
           />
-          <div className="absolute top-3 left-3 flex gap-2">
-            <span className={`${typeColors[house.type]} text-white text-xs font-semibold px-3 py-1 rounded-full`}>
+          {/* Type badge */}
+          <div className="absolute top-2.5 left-2.5 flex gap-1.5">
+            <span className={`text-white text-xs font-bold px-2.5 py-1 rounded-full
+              ${house.type === 'sotish' ? 'bg-blue-600' : 'bg-purple-600'}`}>
               {house.type === 'sotish' ? 'Sotish' : 'Ijara'}
             </span>
             {house.status && (
-              <span className={`${statusColors[house.status] || 'bg-gray-100 text-gray-700'} text-xs font-semibold px-3 py-1 rounded-full`}>
-                {house.status === 'yangi' ? 'Yangi' : house.status === 'foydalanilgan' ? 'Foydalanilgan' : 'Qurilayotgan'}
+              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${statusColors[house.status] || 'bg-gray-100 text-gray-700'}`}>
+                {statusLabels[house.status] || house.status}
               </span>
             )}
           </div>
+          {/* Talaba badge */}
           {house.studentFriendly && (
-            <div className="absolute bottom-3 left-3 bg-purple-600 text-white px-3 py-1 rounded-lg text-xs font-semibold">
+            <div className="absolute bottom-2.5 left-2.5 bg-purple-600/90 text-white px-2.5 py-0.5 rounded-lg text-xs font-semibold backdrop-blur-sm">
               🎓 Talaba uchun
             </div>
           )}
-          <div className="absolute bottom-3 right-3 bg-black/60 text-white px-3 py-1 rounded-lg text-sm font-semibold">
+          {/* Maydon */}
+          <div className="absolute bottom-2.5 right-2.5 bg-black/50 text-white px-2.5 py-0.5 rounded-lg text-xs font-semibold backdrop-blur-sm">
             {house.area} m²
           </div>
         </div>
 
-        <div className="p-5">
-          <h3 className="font-bold text-lg text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-1 mb-2">
+        {/* Matn */}
+        <div className="p-4">
+          <h3 className="font-bold text-base text-gray-900 line-clamp-1 mb-1">
             {house.title}
           </h3>
-
-          <div className="flex items-center gap-1 text-gray-500 text-sm mb-3">
-            <MapPin size={14} />
-            <span className="line-clamp-1">{house.city}, {house.address || ''}</span>
+          <div className="flex items-center gap-1 text-gray-400 text-xs mb-3">
+            <MapPin size={12} />
+            <span className="line-clamp-1">{house.city}{house.address ? `, ${house.address}` : ''}</span>
           </div>
 
-          <div className="flex items-center gap-4 text-sm text-gray-600 mb-4">
+          {/* Stats row */}
+          <div className="flex items-center gap-3 text-xs text-gray-500 mb-3">
             <div className="flex items-center gap-1">
-              <Bed size={16} className="text-gray-400" />
+              <Bed size={13} className="text-gray-400" />
               <span>{house.rooms} xona</span>
             </div>
             <div className="flex items-center gap-1">
-              <Maximize size={16} className="text-gray-400" />
+              <Maximize size={13} className="text-gray-400" />
               <span>{house.area} m²</span>
             </div>
-            {house.floor && (
+            {house.floor ? (
               <div className="flex items-center gap-1">
-                <Building size={16} className="text-gray-400" />
+                <Building size={13} className="text-gray-400" />
                 <span>{house.floor}/{house.totalFloors || '?'}-qavat</span>
               </div>
-            )}
+            ) : null}
           </div>
 
-          <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+          {/* Narx */}
+          <div className="flex items-center justify-between pt-3 border-t border-gray-50">
             <div className="flex items-center gap-1">
-              <Tag size={16} className="text-blue-600" />
-              <span className="text-xl font-bold text-blue-600">
+              <Tag size={14} className="text-blue-600" />
+              <span className="text-lg font-extrabold text-blue-600">
                 {formatPrice(house.price, house.type)}
               </span>
             </div>
-            <span className="text-xs text-gray-400">{house.dateAdded || ''}</span>
+            {house.dateAdded && (
+              <span className="text-[10px] text-gray-400">{house.dateAdded}</span>
+            )}
           </div>
         </div>
       </div>

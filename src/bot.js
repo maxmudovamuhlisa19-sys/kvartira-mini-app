@@ -15,19 +15,15 @@ bot.use(session());
 
 const ROLES = { talaba: 'Talaba', sotuvchi: 'Sotuvchi', boshqa: 'Oddiy foydalanuvchi' };
 
-const isHttps = APP_URL.startsWith('https');
-
 const mainMenu = (ctx) => {
   const user = ctx.session.user;
   return Markup.inlineKeyboard([
+    [Markup.button.webApp('🚀 Mini App ni ochish', APP_URL)],
     [Markup.button.callback('🏠 E\'lonlarni ko\'rish', 'list')],
     [Markup.button.callback('🎓 Talabalar uchun ijara', 'student')],
     [Markup.button.callback('🔍 Qidirish', 'search')],
     [Markup.button.callback('➕ E\'lon qo\'shish', 'add')],
     [Markup.button.callback('👤 Profilim', 'profile')],
-    isHttps
-      ? [Markup.button.webApp('🚀 Mini App', APP_URL)]
-      : [Markup.button.url('🌐 Web sayt', APP_URL)],
     user ? [Markup.button.callback('🚪 Chiqish', 'logout')] : [Markup.button.callback('🔑 Kirish', 'login')]
   ]);
 };
@@ -495,19 +491,29 @@ cities.slice(0, 5).forEach(city => {
 // ---------- LAUNCH ----------
 
 bot.catch((err, ctx) => {
-  console.error(`Error for ${ctx.update?.update_id}:`, err);
+  console.error(`Bot xatosi [${ctx.update?.update_id}]:`, err.message);
 });
 
-bot.telegram.callApi('setChatMenuButton', {
-  menu_button: {
-    type: 'web_app',
-    text: 'Kvartira',
-    web_app: { url: APP_URL }
+// Bot ishga tushgach menyu tugmasini Mini App ga yo'naltirish
+async function setupMenuButton() {
+  try {
+    await bot.telegram.callApi('setChatMenuButton', {
+      menu_button: {
+        type: 'web_app',
+        text: '🏠 Kvartira',
+        web_app: { url: APP_URL }
+      }
+    });
+    console.log(`✅ Menu button sozlandi: ${APP_URL}`);
+  } catch (e) {
+    console.warn('Menu button sozlanmadi:', e.message);
   }
-}).catch(() => {});
+}
 
-bot.launch();
-console.log('✅ Kvartira Telegram bot ishga tushdi!');
+bot.launch().then(() => {
+  console.log('✅ Kvartira Telegram bot ishga tushdi!');
+  setupMenuButton();
+});
 
 process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM'));

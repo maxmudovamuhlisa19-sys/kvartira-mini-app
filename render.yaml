@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: kvartira-uz
+    env: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: node start-all.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: BOT_TOKEN
+        value: 8906247633:AAG3ihqG7Y97Pn3xHw_R__ROEIp8QFvWUvs
+      - key: APP_URL
+        value: https://by-hamroh.uz
+      - key: DATA_DIR
+        value: /opt/render/project/src/data
+    disk:
+      name: kvartira-data
+      mountPath: /opt/render/project/src/data
+      sizeGB: 1

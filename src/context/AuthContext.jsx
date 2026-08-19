@@ -1,76 +1,95 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { tg, isTelegram } from '../telegram';
 
 const AuthContext = createContext(null);
-
 const API = '/api';
+const STORAGE_KEY = 'kvartira_user';
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
-    const saved = localStorage.getItem('kvartira_user');
-    return saved ? JSON.parse(saved) : null;
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      return saved ? JSON.parse(saved) : null;
+    } catch { return null; }
   });
+  const [tgLoading, setTgLoading] = useState(false);
+  const tgLoginAttempted = useRef(false);
 
+  // Foydalanuvchini localStorage ga saqlash
   useEffect(() => {
-    localStorage.setItem('kvartira_user', JSON.stringify(user));
+    if (user) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+    } else {
+      localStorage.removeItem(STORAGE_KEY);
+    }
   }, [user]);
 
-  const getTelegramInitData = () => {
-    try {
-      const tg = window.Telegram?.WebApp;
-      if (!tg) return null;
-      tg.ready();
-      return tg.initData || null;
-    } catch {
-      return null;
-    }
-  };
+  // Telegram Mini App ichida avtomatik login
+  useEffect(() => {
+    if (!isTelegram()) return;
+    if (user) return;                        // allaqachon kirgan
+    if (tgLoginAttempted.current) return;    // bir marta urinib ko'rgan
+    tgLoginAttempted.current = true;
 
+    const app = tg();
+    if (!app?.initData) return;
+    app.ready();
+    app.expand();
+
+    setTgLoading(true);
+    fetch(`${API}/telegram-auth`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ initData: app.initData }),
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) setUser(data.user);
+      })
+      .catch(() => {})
+      .finally(() => setTgLoading(false));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /** Qo'lda Telegram orqali kirish (Login sahifasidan) */
   const tgLogin = async () => {
-    const initData = getTelegramInitData();
-    if (!initData) return { success: false, error: "Telegram orqali kirish faqat Telegram ichida ishlaydi" };
+    const app = tg();
+    if (!app?.initData) {
+      return { success: false, error: 'Telegram ichida ochilmagan' };
+    }
+    setTgLoading(true);
     try {
       const res = await fetch(`${API}/telegram-auth`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ initData })
+        body: JSON.stringify({ initData: app.initData }),
       });
       const data = await res.json();
       if (res.ok && data.success) {
         setUser(data.user);
         return { success: true };
       }
-      return { success: false, error: data.error || "Kirish amalga oshmadi" };
+      return { success: false, error: data.error || 'Kirish amalga oshmadi' };
     } catch {
-      return { success: false, error: "Server bilan bog'lanib bo'lmadi." };
+      return { success: false, error: "Server bilan bog'lanib bo'lmadi" };
+    } finally {
+      setTgLoading(false);
     }
   };
 
-  useEffect(() => {
-    const tg = window.Telegram?.WebApp;
-    if (tg?.initData) {
-      tg.ready();
-      tg.expand();
-      if (!localStorage.getItem('kvartira_user')) {
-        setTimeout(() => tgLogin(), 0);
-      }
-    }
-  }, []);
+  const getTelegramInitData = () => tg()?.initData ?? null;
 
   const login = async (email, password) => {
     try {
       const res = await fetch(`${API}/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email, password }),
       });
       const data = await res.json();
-      if (res.ok && data.success) {
-        setUser(data.user);
-        return { success: true };
-      }
+      if (res.ok && data.success) { setUser(data.user); return { success: true }; }
       return { success: false, error: data.error || "Email yoki parol noto'g'ri" };
     } catch {
-      return { success: false, error: "Server bilan bog'lanib bo'lmadi. Server ishlayotganini tekshiring." };
+      return { success: false, error: "Server bilan bog'lanib bo'lmadi" };
     }
   };
 
@@ -79,38 +98,33 @@ export function AuthProvider({ children }) {
       const res = await fetch(`${API}/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, phone, password, role })
+        body: JSON.stringify({ name, email, phone, password, role }),
       });
       const data = await res.json();
-      if (res.ok && data.success) {
-        setUser(data.user);
-        return { success: true };
-      }
+      if (res.ok && data.success) { setUser(data.user); return { success: true }; }
       return { success: false, error: data.error || "Ro'yxatdan o'tib bo'lmadi" };
     } catch {
-      return { success: false, error: "Server bilan bog'lanib bo'lmadi." };
+      return { success: false, error: "Server bilan bog'lanib bo'lmadi" };
     }
   };
 
-  const logout = () => {
-    setUser(null);
-  };
+  const logout = () => setUser(null);
 
-  const updateProfile = (updates) => {
-    setUser({ ...user, ...updates });
-  };
+  const updateProfile = (updates) => setUser(prev => ({ ...prev, ...updates }));
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, updateProfile, tgLogin, getTelegramInitData }}>
+    <AuthContext.Provider value={{
+      user, tgLoading,
+      login, register, logout, updateProfile,
+      tgLogin, getTelegramInitData,
+    }}>
       {children}
     </AuthContext.Provider>
   );
 }
 
 export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
-  }
-  return context;
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+  return ctx;
 }

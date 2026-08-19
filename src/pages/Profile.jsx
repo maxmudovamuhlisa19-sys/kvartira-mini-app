@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useHouses } from '../context/HouseContext';
-import { User, Mail, Phone, Lock, Edit, Save, Home, Eye, Trash2 } from 'lucide-react';
+import { User, Mail, Phone, Edit, Save, Home, Eye, Trash2, LogOut, Plus } from 'lucide-react';
+import { haptic, isTelegram, tgConfirm, getTelegramUser } from '../telegram';
 
 export default function Profile() {
   const navigate = useNavigate();
@@ -12,189 +13,195 @@ export default function Profile() {
   const [form, setForm] = useState({
     name: user?.name || '',
     email: user?.email || '',
-    phone: user?.phone || ''
+    phone: user?.phone || '',
   });
+  const inTg = isTelegram();
+  const tgUser = getTelegramUser();
 
   if (!user) {
-    navigate('/login');
+    navigate('/login', { replace: true });
     return null;
   }
 
   const myHouses = houses.filter(h => h.userId === user.id || h.ownerId === user.id);
 
   const handleSave = () => {
+    haptic('medium');
     updateProfile(form);
     setEditing(false);
   };
 
-  const handleDeleteHouse = async (id) => {
-    if (confirm("Haqiqatan ham o'chirmoqchimisiz?")) {
-      await deleteHouse(id);
+  const handleDeleteHouse = (id) => {
+    haptic('warning');
+    const doDelete = async () => { await deleteHouse(id); };
+    if (inTg) {
+      tgConfirm("Bu e'lonni o'chirmoqchimisiz?", ok => { if (ok) doDelete(); });
+    } else {
+      if (window.confirm("Haqiqatan ham o'chirmoqchimisiz?")) doDelete();
     }
+  };
+
+  const handleLogout = () => {
+    haptic('medium');
+    logout();
+    navigate('/', { replace: true });
   };
 
   const formatPrice = (price, type) => {
     const p = Number(price) || 0;
-    if (type === 'ijara') return `${p.toLocaleString()} so'm/oy`;
-    return `${p.toLocaleString()} so'm`;
+    return type === 'ijara' ? `${p.toLocaleString()} so'm/oy` : `${p.toLocaleString()} so'm`;
   };
 
+  const infoFields = [
+    { icon: User, label: 'To\'liq ism', value: user.name },
+    { icon: Mail, label: 'Email', value: user.email },
+    { icon: Phone, label: 'Telefon', value: user.phone || '—' },
+  ];
+
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="bg-white rounded-2xl shadow-md p-6 md:p-8 mb-8">
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
-              <User size={32} className="text-blue-600" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">{user.name}</h1>
-              <p className="text-gray-500">{user.email}</p>
-            </div>
+    <div className="px-4 pt-4 pb-4 space-y-4">
+      {/* Avatar + ism */}
+      <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl p-5 text-white">
+        <div className="flex items-center gap-4">
+          <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center text-2xl font-bold">
+            {inTg && tgUser?.photo_url ? (
+              <img src={tgUser.photo_url} alt="" className="w-full h-full rounded-2xl object-cover" />
+            ) : (
+              user.name.charAt(0).toUpperCase()
+            )}
           </div>
+          <div className="flex-1 min-w-0">
+            <div className="font-bold text-lg truncate">{user.name}</div>
+            <div className="text-blue-200 text-sm truncate">{user.email}</div>
+            {inTg && (
+              <span className="inline-block bg-white/20 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full mt-1">
+                ✈️ Telegram
+              </span>
+            )}
+          </div>
+        </div>
+        {/* Stats */}
+        <div className="grid grid-cols-3 gap-2 mt-4">
+          {[
+            { label: "E'lonlar", value: myHouses.length },
+            { label: 'Sotish', value: myHouses.filter(h => h.type === 'sotish').length },
+            { label: 'Ijara', value: myHouses.filter(h => h.type === 'ijara').length },
+          ].map(({ label, value }) => (
+            <div key={label} className="bg-white/10 rounded-xl p-2.5 text-center">
+              <div className="text-xl font-bold">{value}</div>
+              <div className="text-blue-200 text-[10px]">{label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Ma'lumotlar */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-50">
+          <span className="text-sm font-bold text-gray-900">Shaxsiy ma'lumotlar</span>
           <button
-            onClick={() => setEditing(!editing)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-colors ${
-              editing ? 'bg-gray-100 text-gray-700' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-            }`}
+            onClick={() => { haptic('light'); setEditing(!editing); }}
+            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors
+              ${editing ? 'bg-gray-100 text-gray-600' : 'bg-blue-50 text-blue-600'}`}
           >
-            <Edit size={18} /> {editing ? 'Bekor' : 'Tahrirlash'}
+            <Edit size={13} /> {editing ? 'Bekor' : 'Tahrirlash'}
           </button>
         </div>
 
         {editing ? (
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Ism</label>
-              <div className="relative">
-                <User size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                  type="text"
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                />
+          <div className="p-4 space-y-3">
+            {[
+              { key: 'name', label: 'Ism', type: 'text', icon: User },
+              { key: 'email', label: 'Email', type: 'email', icon: Mail },
+              { key: 'phone', label: 'Telefon', type: 'tel', icon: Phone },
+            ].map(({ key, label, type, icon: Icon }) => (
+              <div key={key}>
+                <label className="block text-xs font-semibold text-gray-500 mb-1">{label}</label>
+                <div className="relative">
+                  <Icon size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input type={type} value={form[key]}
+                    onChange={e => setForm({ ...form, [key]: e.target.value })}
+                    className="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                </div>
               </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-              <div className="relative">
-                <Mail size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                  type="email"
-                  value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Telefon</label>
-              <div className="relative">
-                <Phone size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                  type="tel"
-                  value={form.phone}
-                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                />
-              </div>
-            </div>
-            <button
-              onClick={handleSave}
-              className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-blue-700 transition-colors"
-            >
-              <Save size={18} /> Saqlash
+            ))}
+            <button onClick={handleSave}
+              className="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 active:bg-blue-700">
+              <Save size={16} /> Saqlash
             </button>
           </div>
         ) : (
-          <div className="space-y-4">
-            <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl">
-              <User size={20} className="text-gray-400" />
-              <div>
-                <div className="text-sm text-gray-500">To'liq ism</div>
-                <div className="font-semibold text-gray-900">{user.name}</div>
+          <div className="divide-y divide-gray-50">
+            {infoFields.map(({ icon: Icon, label, value }) => (
+              <div key={label} className="flex items-center gap-3 px-4 py-3">
+                <Icon size={16} className="text-gray-400 flex-shrink-0" />
+                <div>
+                  <div className="text-[10px] text-gray-400">{label}</div>
+                  <div className="text-sm font-medium text-gray-900">{value}</div>
+                </div>
               </div>
-            </div>
-            <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl">
-              <Mail size={20} className="text-gray-400" />
-              <div>
-                <div className="text-sm text-gray-500">Email</div>
-                <div className="font-semibold text-gray-900">{user.email}</div>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl">
-              <Phone size={20} className="text-gray-400" />
-              <div>
-                <div className="text-sm text-gray-500">Telefon</div>
-                <div className="font-semibold text-gray-900">{user.phone}</div>
-              </div>
-            </div>
+            ))}
           </div>
         )}
       </div>
 
-      <div className="bg-white rounded-2xl shadow-md p-6 md:p-8">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-gray-900">Mening e'lonlarim ({myHouses.length})</h2>
-          <Link
-            to="/add-house"
-            className="bg-blue-600 text-white px-4 py-2 rounded-xl font-medium hover:bg-blue-700 transition-colors text-sm"
-          >
-            + Yangi e'lon
+      {/* Mening e'lonlarim */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-50">
+          <span className="text-sm font-bold text-gray-900">E'lonlarim ({myHouses.length})</span>
+          <Link to="/add-house" onClick={() => haptic('light')}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-green-50 text-green-600">
+            <Plus size={13} /> Yangi
           </Link>
         </div>
 
         {myHouses.length > 0 ? (
-          <div className="space-y-4">
+          <div className="divide-y divide-gray-50">
             {myHouses.map(house => (
-              <div key={house.id} className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+              <div key={house.id} className="flex items-center gap-3 px-4 py-3">
                 <img
-                  src={house.images && house.images[0] ? house.images[0] : 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=400'}
-                  alt={house.title}
-                  className="w-20 h-16 object-cover rounded-lg"
+                  src={house.images?.[0] || 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=100'}
+                  alt=""
+                  className="w-14 h-12 object-cover rounded-xl flex-shrink-0"
                 />
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-gray-900 truncate">{house.title}</h3>
-                  <p className="text-sm text-gray-500">{house.address}</p>
-                  <p className="text-blue-600 font-bold">{formatPrice(house.price, house.type)}</p>
+                  <div className="text-sm font-semibold text-gray-900 truncate">{house.title}</div>
+                  <div className="text-xs text-blue-600 font-bold">{formatPrice(house.price, house.type)}</div>
                 </div>
-                <div className="flex gap-2">
-                  <Link
-                    to={`/house/${house.id}`}
-                    className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                  >
-                    <Eye size={18} />
+                <div className="flex gap-1 flex-shrink-0">
+                  <Link to={`/house/${house.id}`} onClick={() => haptic('light')}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-50 text-gray-500 active:bg-gray-100">
+                    <Eye size={15} />
                   </Link>
-                  <Link
-                    to={`/edit-house/${house.id}`}
-                    className="p-2 text-gray-500 hover:text-yellow-600 hover:bg-yellow-50 rounded-lg transition-colors"
-                  >
-                    <Edit size={18} />
+                  <Link to={`/edit-house/${house.id}`} onClick={() => haptic('light')}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg bg-yellow-50 text-yellow-600 active:bg-yellow-100">
+                    <Edit size={15} />
                   </Link>
-                  <button
-                    onClick={() => handleDeleteHouse(house.id)}
-                    className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                  >
-                    <Trash2 size={18} />
+                  <button onClick={() => handleDeleteHouse(house.id)}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg bg-red-50 text-red-500 active:bg-red-100">
+                    <Trash2 size={15} />
                   </button>
                 </div>
               </div>
             ))}
           </div>
         ) : (
-          <div className="text-center py-12">
-            <Home size={48} className="text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500 mb-4">Siz hali hech qanday e'lon bermagansiz</p>
-            <Link
-              to="/add-house"
-              className="inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-blue-700 transition-colors"
-            >
-              + Birinchi e'lonni bering
+          <div className="flex flex-col items-center py-10 text-center px-4">
+            <Home size={36} className="text-gray-200 mb-3" />
+            <p className="text-gray-400 text-sm mb-3">Hali hech qanday e'lon yo'q</p>
+            <Link to="/add-house" onClick={() => haptic('medium')}
+              className="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold">
+              Birinchi e'lonni bering
             </Link>
           </div>
         )}
       </div>
+
+      {/* Chiqish */}
+      <button onClick={handleLogout}
+        className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl border border-red-200 text-red-500 font-semibold text-sm bg-red-50 active:bg-red-100 transition-colors">
+        <LogOut size={18} /> Hisobdan chiqish
+      </button>
     </div>
   );
 }
