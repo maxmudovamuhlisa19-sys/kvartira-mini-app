@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: kvartira-mini-app
+    runtime: node
+    # Bepul plan uchun. Ma'lumotlar restartda tiklanadi (qayta o'chadi).
+    # Ma'lumotlar saqlanishi uchun Starter plan (\\$7/oy) tanlang va diskni yoqing:
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: APP_URL
+        value: https://by-hamroh.uz
+      - key: DATA_DIR
+        value: /data
+      - key: BOT_TOKEN
+        sync: false
+    # disk: # faqat pullik plan bilan
+    #   name: kvartira-data
+    #   mountPath: /data
+    #   sizeGB: 1
