@@ -18,13 +18,13 @@ body {
 
 /* Telegram tema o'zgaruvchilari (applyTelegramTheme tomonidan to'ldiriladi) */
 :root {
-  --tg-bg: #f8fafc;
+  --tg-bg: #fffbeb;
   --tg-text: #1e293b;
   --tg-hint: #64748b;
-  --tg-link: #2563eb;
-  --tg-btn: #2563eb;
+  --tg-link: #d97706;
+  --tg-btn: #f59e0b;
   --tg-btn-text: #ffffff;
-  --tg-secondary-bg: #f1f5f9;
+  --tg-secondary-bg: #fef3c7;
 }
 
 /* Scrollbar — faqat desktop */

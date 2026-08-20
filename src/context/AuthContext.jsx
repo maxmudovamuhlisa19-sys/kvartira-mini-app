@@ -27,8 +27,8 @@ export function AuthProvider({ children }) {
   // Telegram Mini App ichida avtomatik login
   useEffect(() => {
     if (!isTelegram()) return;
-    if (user) return;                        // allaqachon kirgan
-    if (tgLoginAttempted.current) return;    // bir marta urinib ko'rgan
+    if (user) return;
+    if (tgLoginAttempted.current) return;
     tgLoginAttempted.current = true;
 
     const app = tg();
@@ -36,7 +36,6 @@ export function AuthProvider({ children }) {
     app.ready();
     app.expand();
 
-    setTgLoading(true);
     fetch(`${API}/telegram-auth`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -46,8 +45,7 @@ export function AuthProvider({ children }) {
       .then(data => {
         if (data.success) setUser(data.user);
       })
-      .catch(() => {})
-      .finally(() => setTgLoading(false));
+      .catch(() => {});
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   /** Qo'lda Telegram orqali kirish (Login sahifasidan) */
@@ -123,7 +121,7 @@ export function AuthProvider({ children }) {
   );
 }
 
-export function useAuth() {
+export function useAuth() { // eslint-disable-line react-refresh/only-export-components
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error('useAuth must be used within AuthProvider');
   return ctx;

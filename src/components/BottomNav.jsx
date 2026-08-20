@@ -21,7 +21,7 @@ export default function BottomNav() {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 safe-area-bottom"
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-amber-200 safe-area-bottom"
          style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
       <div className="flex items-center justify-around h-16">
         {navItems.map(({ href, icon: Icon, label, special }) => {
@@ -35,19 +35,19 @@ export default function BottomNav() {
                 ${special
                   ? 'relative'
                   : active
-                    ? 'text-blue-600'
+                    ? 'text-amber-600'
                     : 'text-gray-400 hover:text-gray-600'
                 }`}
             >
               {special ? (
                 <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg transition-all
-                  ${active ? 'bg-blue-700 scale-95' : 'bg-blue-600'}`}>
+                  ${active ? 'bg-amber-600 scale-95' : 'bg-amber-500'}`}>
                   <Icon size={24} className="text-white" />
                 </div>
               ) : (
                 <>
                   <Icon size={22} strokeWidth={active ? 2.5 : 1.8} />
-                  <span className={`text-[10px] font-medium truncate max-w-[60px] ${active ? 'text-blue-600' : ''}`}>
+                  <span className={`text-[10px] font-medium truncate max-w-[60px] ${active ? 'text-amber-600' : ''}`}>
                     {label}
                   </span>
                 </>

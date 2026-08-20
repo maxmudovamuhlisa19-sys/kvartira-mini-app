@@ -80,7 +80,7 @@ export default function Login() {
               value={form.email}
               onChange={e => setForm({ ...form, email: e.target.value })}
               placeholder="email@example.com"
-              className="w-full pl-10 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              className="w-full pl-10 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-amber-400 focus:border-transparent outline-none"
             />
           </div>
         </div>
@@ -94,7 +94,7 @@ export default function Login() {
               value={form.password}
               onChange={e => setForm({ ...form, password: e.target.value })}
               placeholder="••••••••"
-              className="w-full pl-10 pr-12 py-3.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              className="w-full pl-10 pr-12 py-3.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-amber-400 focus:border-transparent outline-none"
             />
             <button type="button" onClick={() => setShowPass(!showPass)}
               className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 p-1">
@@ -106,14 +106,14 @@ export default function Login() {
         <button type="submit" disabled={loading}
           onClick={() => !loading && haptic('medium')}
           className={`w-full py-4 rounded-xl font-bold text-base transition-colors
-            ${loading ? 'bg-gray-300 text-gray-500' : 'bg-blue-600 text-white active:bg-blue-700'}`}>
+            ${loading ? 'bg-gray-300 text-gray-500' : 'bg-amber-500 text-white active:bg-amber-600'}`}>
           {loading ? 'Kirilmoqda...' : 'Kirish'}
         </button>
       </form>
 
       <div className="text-center mt-5">
         <span className="text-gray-500 text-sm">Hisobingiz yo'qmi? </span>
-        <Link to="/register" className="text-blue-600 font-semibold text-sm" onClick={() => haptic('light')}>
+        <Link to="/register" className="text-amber-600 font-semibold text-sm" onClick={() => haptic('light')}>
           Ro'yxatdan o'ting
         </Link>
       </div>

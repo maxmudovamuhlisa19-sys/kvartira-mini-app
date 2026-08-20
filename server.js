@@ -3,6 +3,7 @@ import cors from 'cors';
 import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
+import multer from 'multer';
 import { fileURLToPath } from 'url';
 import {
   getHouses,
@@ -21,6 +22,39 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
+
+// ---------- FILE UPLOAD ----------
+
+const UPLOADS_DIR = path.join(__dirname, 'uploads');
+if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, UPLOADS_DIR),
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname) || '.jpg';
+    cb(null, `${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`);
+  }
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowed = /jpeg|jpg|png|gif|webp/;
+    const ok = allowed.test(path.extname(file.originalname).toLowerCase()) && allowed.test(file.mimetype);
+    cb(ok ? null : new Error('Faqat rasm fayllar yuklash mumkin'), ok);
+  }
+});
+
+app.use('/uploads', express.static(UPLOADS_DIR));
+
+app.post('/api/upload', upload.array('images', 10), (req, res) => {
+  if (!req.files || req.files.length === 0) {
+    return res.status(400).json({ error: 'Rasm tanlanmagan' });
+  }
+  const urls = req.files.map(f => `/uploads/${f.filename}`);
+  res.json({ success: true, urls });
+});
 
 // ---------- AUTH API ----------
 
@@ -173,7 +207,7 @@ app.use((req, res, next) => {
     return res.sendFile(path.join(distPath, 'index.html'));
   }
   res.json({
-    message: "Kvartira API ishlayapti. Web sayt uchun 'npm run build' qiling.",
+    message: "Hamroh API ishlayapti. Web sayt uchun 'npm run build' qiling.",
     endpoints: ['/api/houses', '/api/login', '/api/register']
   });
 });

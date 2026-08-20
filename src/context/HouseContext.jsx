@@ -102,7 +102,7 @@ export function HouseProvider({ children }) {
   );
 }
 
-export function useHouses() {
+export function useHouses() { // eslint-disable-line react-refresh/only-export-components
   const context = useContext(HouseContext);
   if (!context) {
     throw new Error('useHouses must be used within HouseProvider');

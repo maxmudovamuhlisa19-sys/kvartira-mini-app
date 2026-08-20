@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useHouses } from '../context/HouseContext';
 import HouseCard from '../components/HouseCard';
@@ -22,11 +22,7 @@ export default function Houses() {
     maxArea: searchParams.get('maxArea') || '',
   });
 
-  const [results, setResults] = useState([]);
-
-  useEffect(() => {
-    setResults(searchHouses(filters));
-  }, [filters]); // eslint-disable-line react-hooks/exhaustive-deps
+  const results = useMemo(() => searchHouses(filters), [filters, searchHouses]);
 
   const handleChange = (key, value) => {
     const newFilters = { ...filters, [key]: value };
@@ -80,13 +76,13 @@ export default function Houses() {
             placeholder="Shahar, manzil bo'yicha..."
             value={filters.search}
             onChange={(e) => handleChange('search', e.target.value)}
-            className="w-full pl-9 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+            className="w-full pl-9 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-amber-400 focus:border-transparent outline-none"
           />
         </div>
         <button
           onClick={() => { haptic('light'); setShowFilters(!showFilters); }}
           className={`relative flex items-center gap-1.5 px-4 py-3 rounded-xl font-medium text-sm transition-colors
-            ${showFilters ? 'bg-blue-600 text-white' : 'bg-white border border-gray-200 text-gray-700'}`}
+            ${showFilters ? 'bg-amber-500 text-white' : 'bg-white border border-gray-200 text-gray-700'}`}
         >
           <SlidersHorizontal size={16} />
           {hasActiveFilters && (
@@ -113,7 +109,7 @@ export default function Houses() {
                   onClick={() => { haptic('light'); handleChange('type', value); }}
                   className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-colors
                     ${filters.type === value
-                      ? 'bg-blue-600 text-white'
+                      ? 'bg-amber-500 text-white'
                       : 'bg-gray-100 text-gray-600'}`}
                 >
                   {label}
@@ -128,7 +124,7 @@ export default function Houses() {
             <select
               value={filters.city}
               onChange={(e) => handleChange('city', e.target.value)}
-              className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+              className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-amber-400 outline-none"
             >
               <option value="">Barcha shaharlar</option>
               {cities.map(city => <option key={city} value={city}>{city}</option>)}
@@ -145,7 +141,7 @@ export default function Houses() {
                   onClick={() => { haptic('light'); handleChange('rooms', value); }}
                   className={`flex-1 py-2 rounded-xl text-xs font-medium transition-colors
                     ${filters.rooms === value
-                      ? 'bg-blue-600 text-white'
+                      ? 'bg-amber-500 text-white'
                       : 'bg-gray-100 text-gray-600'}`}
                 >
                   {label}
@@ -163,14 +159,14 @@ export default function Houses() {
                 placeholder="Min narx"
                 value={filters.minPrice}
                 onChange={(e) => handleChange('minPrice', e.target.value)}
-                className="flex-1 px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                className="flex-1 px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-amber-400 outline-none"
               />
               <input
                 type="number"
                 placeholder="Max narx"
                 value={filters.maxPrice}
                 onChange={(e) => handleChange('maxPrice', e.target.value)}
-                className="flex-1 px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                className="flex-1 px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-amber-400 outline-none"
               />
             </div>
           </div>
@@ -184,14 +180,14 @@ export default function Houses() {
                 placeholder="Min"
                 value={filters.minArea}
                 onChange={(e) => handleChange('minArea', e.target.value)}
-                className="flex-1 px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                className="flex-1 px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-amber-400 outline-none"
               />
               <input
                 type="number"
                 placeholder="Max"
                 value={filters.maxArea}
                 onChange={(e) => handleChange('maxArea', e.target.value)}
-                className="flex-1 px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                className="flex-1 px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-amber-400 outline-none"
               />
             </div>
           </div>
@@ -222,7 +218,7 @@ export default function Houses() {
           <h3 className="font-semibold text-gray-900 mb-1">Uy topilmadi</h3>
           <p className="text-gray-400 text-sm">Boshqa filtrlar bilan qidirib ko'ring</p>
           {hasActiveFilters && (
-            <button onClick={clearFilters} className="mt-4 text-blue-600 text-sm font-medium">
+            <button onClick={clearFilters} className="mt-4 text-amber-600 text-sm font-medium">
               Filtrlarni tozalash
             </button>
           )}

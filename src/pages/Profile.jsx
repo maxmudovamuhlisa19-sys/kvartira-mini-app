@@ -61,7 +61,7 @@ export default function Profile() {
   return (
     <div className="px-4 pt-4 pb-4 space-y-4">
       {/* Avatar + ism */}
-      <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl p-5 text-white">
+      <div className="bg-gradient-to-br from-amber-500 to-amber-600 rounded-2xl p-5 text-white">
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center text-2xl font-bold">
             {inTg && tgUser?.photo_url ? (
@@ -72,7 +72,7 @@ export default function Profile() {
           </div>
           <div className="flex-1 min-w-0">
             <div className="font-bold text-lg truncate">{user.name}</div>
-            <div className="text-blue-200 text-sm truncate">{user.email}</div>
+            <div className="text-amber-200 text-sm truncate">{user.email}</div>
             {inTg && (
               <span className="inline-block bg-white/20 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full mt-1">
                 ✈️ Telegram
@@ -89,7 +89,7 @@ export default function Profile() {
           ].map(({ label, value }) => (
             <div key={label} className="bg-white/10 rounded-xl p-2.5 text-center">
               <div className="text-xl font-bold">{value}</div>
-              <div className="text-blue-200 text-[10px]">{label}</div>
+              <div className="text-amber-200 text-[10px]">{label}</div>
             </div>
           ))}
         </div>
@@ -102,7 +102,7 @@ export default function Profile() {
           <button
             onClick={() => { haptic('light'); setEditing(!editing); }}
             className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors
-              ${editing ? 'bg-gray-100 text-gray-600' : 'bg-blue-50 text-blue-600'}`}
+              ${editing ? 'bg-gray-100 text-gray-600' : 'bg-amber-50 text-amber-600'}`}
           >
             <Edit size={13} /> {editing ? 'Bekor' : 'Tahrirlash'}
           </button>
@@ -121,12 +121,12 @@ export default function Profile() {
                   <Icon size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                   <input type={type} value={form[key]}
                     onChange={e => setForm({ ...form, [key]: e.target.value })}
-                    className="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                    className="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-amber-400 outline-none" />
                 </div>
               </div>
             ))}
             <button onClick={handleSave}
-              className="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 active:bg-blue-700">
+              className="w-full bg-amber-500 text-white py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 active:bg-amber-600">
               <Save size={16} /> Saqlash
             </button>
           </div>
@@ -166,7 +166,7 @@ export default function Profile() {
                 />
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-semibold text-gray-900 truncate">{house.title}</div>
-                  <div className="text-xs text-blue-600 font-bold">{formatPrice(house.price, house.type)}</div>
+                  <div className="text-xs text-amber-600 font-bold">{formatPrice(house.price, house.type)}</div>
                 </div>
                 <div className="flex gap-1 flex-shrink-0">
                   <Link to={`/house/${house.id}`} onClick={() => haptic('light')}
@@ -190,7 +190,7 @@ export default function Profile() {
             <Home size={36} className="text-gray-200 mb-3" />
             <p className="text-gray-400 text-sm mb-3">Hali hech qanday e'lon yo'q</p>
             <Link to="/add-house" onClick={() => haptic('medium')}
-              className="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold">
+              className="bg-amber-500 text-white px-5 py-2.5 rounded-xl text-sm font-semibold">
               Birinchi e'lonni bering
             </Link>
           </div>

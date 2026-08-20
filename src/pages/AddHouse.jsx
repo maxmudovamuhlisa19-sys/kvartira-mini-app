@@ -1,53 +1,43 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useHouses } from '../context/HouseContext';
 import { useAuth } from '../context/AuthContext';
 import { cities } from '../data/houses';
-import { Upload, X } from 'lucide-react';
+import { Camera, X } from 'lucide-react';
 import { haptic, tgAlert } from '../telegram';
+
+const MAX_IMAGES = 10;
 
 export default function AddHouse() {
   const navigate = useNavigate();
   const { addHouse } = useHouses();
   const { user } = useAuth();
+  const fileInputRef = useRef(null);
 
   const [form, setForm] = useState({
     title: '',
     address: '',
     city: '',
-    district: '',
     price: '',
     rooms: '',
     area: '',
-    floor: '',
-    totalFloors: '',
     type: 'sotish',
-    status: 'yangi',
     description: '',
     phone: user?.phone || '',
-    owner: user?.name || '',
-    features: [],
-    images: [],
   });
 
-  const [imageUrl, setImageUrl] = useState('');
+  const [images, setImages] = useState([]);
+  const [uploading, setUploading] = useState(false);
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
 
-  const allFeatures = [
-    'Balkon', 'Lift', 'Parkovka', 'Konditsioner', 'Internet',
-    'Mebel', 'Smart uy', 'Garaj', 'Hovli', 'Issiqxona', 'Suv',
-  ];
-
   const validate = () => {
     const e = {};
-    if (!form.title.trim())       e.title = 'Sarlavha kiritilishi shart';
-    if (!form.address.trim())     e.address = 'Manzil kiritilishi shart';
-    if (!form.city)               e.city = 'Shahar tanlang';
+    if (!form.title.trim()) e.title = 'Sarlavha kiritilishi shart';
+    if (!form.city) e.city = 'Shahar tanlang';
     if (!form.price || form.price <= 0) e.price = "Narx noto'g'ri";
     if (!form.rooms || form.rooms <= 0) e.rooms = "Xonalar soni noto'g'ri";
-    if (!form.area  || form.area  <= 0) e.area  = "Maydon noto'g'ri";
-    if (!form.description.trim()) e.description = 'Tavsif kiritilishi shart';
+    if (!form.area || form.area <= 0) e.area = "Maydon noto'g'ri";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -57,21 +47,46 @@ export default function AddHouse() {
     if (errors[key]) setErrors(e => ({ ...e, [key]: '' }));
   };
 
-  const addImageUrl = () => {
-    if (imageUrl.trim()) {
-      setForm(f => ({ ...f, images: [...f.images, imageUrl.trim()] }));
-      setImageUrl('');
+  const handleFileSelect = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    const remaining = MAX_IMAGES - images.length;
+    if (remaining <= 0) {
+      tgAlert(`Faqat ${MAX_IMAGES} ta rasm yuklash mumkin!`);
+      return;
+    }
+    const toUpload = files.slice(0, remaining);
+
+    if (files.length > remaining) {
+      tgAlert(`Faqat ${remaining} ta rasm qo'shish mumkin. ${files.length - remaining} tasi tashlab yuborildi.`);
+    }
+
+    setUploading(true);
+    haptic('medium');
+
+    const formData = new FormData();
+    toUpload.forEach(f => formData.append('images', f));
+
+    try {
+      const res = await fetch('/api/upload', { method: 'POST', body: formData });
+      const data = await res.json();
+      if (data.success && data.urls) {
+        setImages(prev => [...prev, ...data.urls].slice(0, MAX_IMAGES));
+      } else {
+        tgAlert(data.error || 'Rasm yuklashda xatolik');
+      }
+    } catch {
+      tgAlert("Server bilan bog'lanib bo'lmadi");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
-  const toggleFeature = (feat) => {
+  const removeImage = (index) => {
     haptic('light');
-    setForm(f => ({
-      ...f,
-      features: f.features.includes(feat)
-        ? f.features.filter(x => x !== feat)
-        : [...f.features, feat],
-    }));
+    setImages(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e) => {
@@ -88,9 +103,7 @@ export default function AddHouse() {
       price: Number(form.price),
       rooms: Number(form.rooms),
       area: Number(form.area),
-      floor: Number(form.floor) || 1,
-      totalFloors: Number(form.totalFloors) || 1,
-      images: form.images.length > 0 ? form.images : [
+      images: images.length > 0 ? images : [
         'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800',
       ],
       userId: user?.id,
@@ -100,168 +113,60 @@ export default function AddHouse() {
     if (result?.success) {
       navigate(`/house/${result.house?.id || ''}`, { replace: true });
     } else {
-      tgAlert(result?.error || "Xatolik yuz berdi. Qayta urinib ko'ring.");
+      tgAlert(result?.error || "Xatolik yuz berdi");
     }
   };
 
   const inp = (key) =>
-    `w-full px-4 py-3 bg-gray-50 border rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all
+    `w-full px-4 py-3 bg-gray-50 border rounded-xl text-sm focus:ring-2 focus:ring-amber-400 focus:border-transparent outline-none transition-all
     ${errors[key] ? 'border-red-400 bg-red-50' : 'border-gray-200'}`;
-
-  const Err = ({ k }) => errors[k]
-    ? <p className="text-red-500 text-xs mt-1">{errors[k]}</p>
-    : null;
 
   return (
     <div className="px-4 pt-4 pb-6">
       <form onSubmit={handleSubmit} className="space-y-4">
 
-        {/* Sarlavha */}
+        {/* Rasmlar */}
         <div>
-          <label className="block text-xs font-semibold text-gray-600 mb-1.5">Sarlavha *</label>
-          <input type="text" value={form.title}
-            onChange={e => handleChange('title', e.target.value)}
-            placeholder="Zamonaviy kvartira..."
-            className={inp('title')} />
-          <Err k="title" />
-        </div>
+          <label className="block text-xs font-semibold text-gray-600 mb-2">
+            Rasmlar ({images.length}/{MAX_IMAGES})
+          </label>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={handleFileSelect}
+            className="hidden"
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading || images.length >= MAX_IMAGES}
+            className={`w-full py-8 border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-2 transition-colors
+              ${images.length >= MAX_IMAGES
+                ? 'border-gray-200 bg-gray-50 text-gray-400'
+                : 'border-amber-300 bg-amber-50 text-amber-600 active:bg-amber-100'
+              }`}
+          >
+            {uploading ? (
+              <span className="w-6 h-6 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Camera size={28} />
+            )}
+            <span className="text-sm font-medium">
+              {uploading ? 'Yuklanmoqda...' : images.length >= MAX_IMAGES ? 'Limit tugadi' : 'Rasm yuklash'}
+            </span>
+            {!uploading && images.length < MAX_IMAGES && (
+              <span className="text-xs text-gray-400">JPG, PNG, WebP — maks. 5 MB</span>
+            )}
+          </button>
 
-        {/* Shahar + Tuman */}
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Shahar *</label>
-            <select value={form.city} onChange={e => handleChange('city', e.target.value)} className={inp('city')}>
-              <option value="">Tanlang</option>
-              {cities.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
-            <Err k="city" />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Tuman</label>
-            <input type="text" value={form.district}
-              onChange={e => handleChange('district', e.target.value)}
-              placeholder="Tuman nomi"
-              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-          </div>
-        </div>
-
-        {/* Manzil */}
-        <div>
-          <label className="block text-xs font-semibold text-gray-600 mb-1.5">Manzil *</label>
-          <input type="text" value={form.address}
-            onChange={e => handleChange('address', e.target.value)}
-            placeholder="Ko'cha, uy raqami"
-            className={inp('address')} />
-          <Err k="address" />
-        </div>
-
-        {/* Narx, Xona, Maydon */}
-        <div className="grid grid-cols-3 gap-3">
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Narx *</label>
-            <input type="number" value={form.price}
-              onChange={e => handleChange('price', e.target.value)}
-              placeholder="0" className={inp('price')} />
-            <Err k="price" />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Xona *</label>
-            <input type="number" value={form.rooms}
-              onChange={e => handleChange('rooms', e.target.value)}
-              placeholder="1" className={inp('rooms')} />
-            <Err k="rooms" />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Maydon m² *</label>
-            <input type="number" value={form.area}
-              onChange={e => handleChange('area', e.target.value)}
-              placeholder="0" className={inp('area')} />
-            <Err k="area" />
-          </div>
-        </div>
-
-        {/* Qavat */}
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Qavat</label>
-            <div className="flex gap-2 items-center">
-              <input type="number" value={form.floor}
-                onChange={e => handleChange('floor', e.target.value)}
-                placeholder="1"
-                className="w-full px-3 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-              <span className="text-gray-400 text-sm">/</span>
-              <input type="number" value={form.totalFloors}
-                onChange={e => handleChange('totalFloors', e.target.value)}
-                placeholder="9"
-                className="w-full px-3 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1.5">Tur</label>
-              <select value={form.type} onChange={e => handleChange('type', e.target.value)}
-                className="w-full px-3 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-                <option value="sotish">Sotish</option>
-                <option value="ijara">Ijara</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1.5">Holat</label>
-              <select value={form.status} onChange={e => handleChange('status', e.target.value)}
-                className="w-full px-3 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-                <option value="yangi">Yangi</option>
-                <option value="foydalanilgan">Foydalanilgan</option>
-                <option value="qurilayotgan">Qurilayotgan</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* Tavsif */}
-        <div>
-          <label className="block text-xs font-semibold text-gray-600 mb-1.5">Tavsif *</label>
-          <textarea value={form.description}
-            onChange={e => handleChange('description', e.target.value)}
-            rows={3}
-            placeholder="Uy haqida batafsil..."
-            className={inp('description')} />
-          <Err k="description" />
-        </div>
-
-        {/* Imkoniyatlar */}
-        <div>
-          <label className="block text-xs font-semibold text-gray-600 mb-2">Imkoniyatlar</label>
-          <div className="flex flex-wrap gap-2">
-            {allFeatures.map(feat => (
-              <button key={feat} type="button"
-                onClick={() => toggleFeature(feat)}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-colors
-                  ${form.features.includes(feat) ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'}`}>
-                {feat}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Rasm URL */}
-        <div>
-          <label className="block text-xs font-semibold text-gray-600 mb-1.5">Rasm URL</label>
-          <div className="flex gap-2">
-            <input type="url" value={imageUrl}
-              onChange={e => setImageUrl(e.target.value)}
-              placeholder="https://example.com/image.jpg"
-              className="flex-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-            <button type="button" onClick={() => { haptic('light'); addImageUrl(); }}
-              className="px-4 py-3 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors">
-              <Upload size={18} />
-            </button>
-          </div>
-          {form.images.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-2">
-              {form.images.map((img, i) => (
+          {images.length > 0 && (
+            <div className="grid grid-cols-5 gap-2 mt-3">
+              {images.map((img, i) => (
                 <div key={i} className="relative">
-                  <img src={img} alt="" className="w-20 h-16 object-cover rounded-xl" />
-                  <button type="button" onClick={() => { haptic('light'); setForm(f => ({ ...f, images: f.images.filter((_, j) => j !== i) })); }}
+                  <img src={img} alt="" className="w-full h-16 object-cover rounded-lg" />
+                  <button type="button" onClick={() => removeImage(i)}
                     className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center">
                     <X size={11} />
                   </button>
@@ -271,29 +176,93 @@ export default function AddHouse() {
           )}
         </div>
 
-        {/* Telefon + Egasi */}
+        {/* Sarlavha */}
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 mb-1.5">Sarlavha *</label>
+          <input type="text" value={form.title}
+            onChange={e => handleChange('title', e.target.value)}
+            placeholder="Zamonaviy kvartira..."
+            className={inp('title')} />
+          {errors.title && <p className="text-red-500 text-xs mt-1">{errors.title}</p>}
+        </div>
+
+        {/* Shahar */}
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 mb-1.5">Shahar *</label>
+          <select value={form.city} onChange={e => handleChange('city', e.target.value)} className={inp('city')}>
+            <option value="">Tanlang</option>
+            {cities.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+          {errors.city && <p className="text-red-500 text-xs mt-1">{errors.city}</p>}
+        </div>
+
+        {/* Manzil */}
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 mb-1.5">Manzil</label>
+          <input type="text" value={form.address}
+            onChange={e => handleChange('address', e.target.value)}
+            placeholder="Ko'cha, uy raqami"
+            className={inp('address')} />
+        </div>
+
+        {/* Narx, Xona, Maydon */}
+        <div className="grid grid-cols-3 gap-3">
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Narx *</label>
+            <input type="number" value={form.price}
+              onChange={e => handleChange('price', e.target.value)}
+              placeholder="0" className={inp('price')} />
+            {errors.price && <p className="text-red-500 text-xs mt-1">{errors.price}</p>}
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Xona *</label>
+            <input type="number" value={form.rooms}
+              onChange={e => handleChange('rooms', e.target.value)}
+              placeholder="1" className={inp('rooms')} />
+            {errors.rooms && <p className="text-red-500 text-xs mt-1">{errors.rooms}</p>}
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5">m² *</label>
+            <input type="number" value={form.area}
+              onChange={e => handleChange('area', e.target.value)}
+              placeholder="0" className={inp('area')} />
+            {errors.area && <p className="text-red-500 text-xs mt-1">{errors.area}</p>}
+          </div>
+        </div>
+
+        {/* Tur */}
         <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Turi</label>
+            <select value={form.type} onChange={e => handleChange('type', e.target.value)}
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-amber-400 outline-none">
+              <option value="sotish">Sotish</option>
+              <option value="ijara">Ijara</option>
+            </select>
+          </div>
           <div>
             <label className="block text-xs font-semibold text-gray-600 mb-1.5">Telefon</label>
             <input type="tel" value={form.phone}
               onChange={e => handleChange('phone', e.target.value)}
               placeholder="+998 90 123 45 67"
-              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Egasi</label>
-            <input type="text" value={form.owner}
-              onChange={e => handleChange('owner', e.target.value)}
-              placeholder="To'liq ism"
-              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-amber-400 outline-none" />
           </div>
         </div>
 
+        {/* Tavsif */}
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 mb-1.5">Tavsif</label>
+          <textarea value={form.description}
+            onChange={e => handleChange('description', e.target.value)}
+            rows={3}
+            placeholder="Uy haqida batafsil..."
+            className={inp('description')} />
+        </div>
+
         {/* Submit */}
-        <button type="submit" disabled={submitting}
-          onClick={() => !submitting && haptic('medium')}
+        <button type="submit" disabled={submitting || uploading}
           className={`w-full py-4 rounded-xl font-bold text-base transition-colors
-            ${submitting ? 'bg-gray-300 text-gray-500' : 'bg-blue-600 text-white active:bg-blue-700'}`}>
+            ${submitting ? 'bg-gray-300 text-gray-500' : 'bg-amber-500 text-white active:bg-amber-600'}`}>
           {submitting ? 'Saqlanmoqda...' : "E'lonni joylashtirish"}
         </button>
       </form>

@@ -7,8 +7,8 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <Building2 size={24} className="text-blue-400" />
-              <span className="text-xl font-bold">Kvartira.uz</span>
+              <Building2 size={24} className="text-amber-400" />
+              <span className="text-xl font-bold">Hamroh</span>
             </div>
             <p className="text-gray-400 text-sm leading-relaxed">
               O'zbekistondagi eng yirik uy-joy portal. Sizning uy topish jarayonini osonlashtiramiz.
@@ -38,15 +38,15 @@ export default function Footer() {
             <h3 className="font-semibold mb-4 text-lg">Aloqa</h3>
             <ul className="space-y-3 text-gray-400">
               <li className="flex items-center gap-2">
-                <Phone size={16} className="text-blue-400" />
+                <Phone size={16} className="text-amber-400" />
                 +998 90 123 45 67
               </li>
               <li className="flex items-center gap-2">
-                <Mail size={16} className="text-blue-400" />
-                info@kvartira.uz
+                <Mail size={16} className="text-amber-400" />
+                info@by-hamroh.uz
               </li>
               <li className="flex items-center gap-2">
-                <MapPin size={16} className="text-blue-400" />
+                <MapPin size={16} className="text-amber-400" />
                 Toshkent shahri
               </li>
             </ul>
@@ -54,7 +54,7 @@ export default function Footer() {
         </div>
 
         <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-500 text-sm">
-          © 2026 Kvartira.uz. Barcha huquqlar himoyalangan.
+          © 2026 Hamroh. Barcha huquqlar himoyalangan.
         </div>
       </div>
     </footer>

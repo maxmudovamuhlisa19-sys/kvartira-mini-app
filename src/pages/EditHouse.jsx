@@ -1,10 +1,27 @@
-import { useState, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useHouses } from '../context/HouseContext';
 import { useAuth } from '../context/AuthContext';
 import { cities } from '../data/houses';
-import { Upload, X } from 'lucide-react';
+import { Camera, X } from 'lucide-react';
 import { haptic, tgAlert } from '../telegram';
+
+const MAX_IMAGES = 10;
+
+function getFormFromHouse(house) {
+  return {
+    title: house?.title || '',
+    address: house?.address || '',
+    city: house?.city || '',
+    price: house?.price || '',
+    rooms: house?.rooms || '',
+    area: house?.area || '',
+    type: house?.type || 'sotish',
+    description: house?.description || '',
+    phone: house?.phone || '',
+    owner: house?.owner || '',
+  };
+}
 
 export default function EditHouse() {
   const { id } = useParams();
@@ -12,47 +29,12 @@ export default function EditHouse() {
   const { getHouse, updateHouse, loading } = useHouses();
   const { user } = useAuth();
   const house = getHouse(id);
+  const fileInputRef = useRef(null);
 
-  const [form, setForm] = useState({
-    title: '', address: '', city: '', district: '', price: '',
-    rooms: '', area: '', floor: '', totalFloors: '', type: 'sotish',
-    status: 'yangi', description: '', phone: '', owner: '',
-    features: [], images: [],
-  });
-  const [imageUrl, setImageUrl] = useState('');
+  const [form, setForm] = useState(() => getFormFromHouse(house));
+  const [images, setImages] = useState(() => house?.images || []);
+  const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-
-  const allFeatures = [
-    'Balkon', 'Lift', 'Parkovka', 'Konditsioner', 'Internet',
-    'Mebel', 'Smart uy', 'Garaj', 'Hovli', 'Issiqxona', 'Suv',
-  ];
-
-  useEffect(() => {
-    if (!house) return;
-    // Egasini tekshirish
-    if (user && user.id !== house.userId && user.id !== house.ownerId) {
-      navigate('/', { replace: true });
-      return;
-    }
-    setForm({
-      title: house.title || '',
-      address: house.address || '',
-      city: house.city || '',
-      district: house.district || '',
-      price: house.price || '',
-      rooms: house.rooms || '',
-      area: house.area || '',
-      floor: house.floor || '',
-      totalFloors: house.totalFloors || '',
-      type: house.type || 'sotish',
-      status: house.status || 'yangi',
-      description: house.description || '',
-      phone: house.phone || '',
-      owner: house.owner || '',
-      features: house.features || [],
-      images: house.images || [],
-    });
-  }, [house]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) {
     return (
@@ -70,16 +52,49 @@ export default function EditHouse() {
     );
   }
 
+  if (user && user.id !== house.userId && user.id !== house.ownerId) {
+    navigate('/', { replace: true });
+    return null;
+  }
+
   const handleChange = (key, value) => setForm(f => ({ ...f, [key]: value }));
 
-  const toggleFeature = (feat) => {
+  const handleFileSelect = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    const remaining = MAX_IMAGES - images.length;
+    if (remaining <= 0) {
+      tgAlert(`Faqat ${MAX_IMAGES} ta rasm yuklash mumkin!`);
+      return;
+    }
+    const toUpload = files.slice(0, remaining);
+
+    setUploading(true);
+    haptic('medium');
+
+    const formData = new FormData();
+    toUpload.forEach(f => formData.append('images', f));
+
+    try {
+      const res = await fetch('/api/upload', { method: 'POST', body: formData });
+      const data = await res.json();
+      if (data.success && data.urls) {
+        setImages(prev => [...prev, ...data.urls].slice(0, MAX_IMAGES));
+      } else {
+        tgAlert(data.error || 'Rasm yuklashda xatolik');
+      }
+    } catch {
+      tgAlert("Server bilan bog'lanib bo'lmadi");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const removeImage = (index) => {
     haptic('light');
-    setForm(f => ({
-      ...f,
-      features: f.features.includes(feat)
-        ? f.features.filter(x => x !== feat)
-        : [...f.features, feat],
-    }));
+    setImages(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e) => {
@@ -91,18 +106,51 @@ export default function EditHouse() {
       price: Number(form.price),
       rooms: Number(form.rooms),
       area: Number(form.area),
-      floor: Number(form.floor) || 1,
-      totalFloors: Number(form.totalFloors) || 1,
+      images,
     });
     setSubmitting(false);
     navigate(`/house/${house.id}`, { replace: true });
   };
 
-  const inp = 'w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none';
+  const inp = 'w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-amber-400 focus:border-transparent outline-none';
 
   return (
     <div className="px-4 pt-4 pb-6">
       <form onSubmit={handleSubmit} className="space-y-4">
+
+        {/* Rasmlar */}
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 mb-2">
+            Rasmlar ({images.length}/{MAX_IMAGES})
+          </label>
+          <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleFileSelect} className="hidden" />
+          <button type="button" onClick={() => fileInputRef.current?.click()}
+            disabled={uploading || images.length >= MAX_IMAGES}
+            className={`w-full py-6 border-2 border-dashed rounded-xl flex items-center justify-center gap-2 transition-colors
+              ${images.length >= MAX_IMAGES
+                ? 'border-gray-200 bg-gray-50 text-gray-400'
+                : 'border-amber-300 bg-amber-50 text-amber-600 active:bg-amber-100'}`}>
+            {uploading ? (
+              <span className="w-5 h-5 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Camera size={22} />
+            )}
+            <span className="text-sm font-medium">{uploading ? 'Yuklanmoqda...' : 'Rasm qo\'shish'}</span>
+          </button>
+          {images.length > 0 && (
+            <div className="grid grid-cols-5 gap-2 mt-3">
+              {images.map((img, i) => (
+                <div key={i} className="relative">
+                  <img src={img} alt="" className="w-full h-16 object-cover rounded-lg" />
+                  <button type="button" onClick={() => removeImage(i)}
+                    className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center">
+                    <X size={11} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
         <div>
           <label className="block text-xs font-semibold text-gray-600 mb-1.5">Sarlavha</label>
@@ -118,8 +166,11 @@ export default function EditHouse() {
             </select>
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Tuman</label>
-            <input type="text" value={form.district} onChange={e => handleChange('district', e.target.value)} className={inp} />
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Turi</label>
+            <select value={form.type} onChange={e => handleChange('type', e.target.value)} className={inp}>
+              <option value="sotish">Sotish</option>
+              <option value="ijara">Ijara</option>
+            </select>
           </div>
         </div>
 
@@ -138,41 +189,19 @@ export default function EditHouse() {
             <input type="number" value={form.rooms} onChange={e => handleChange('rooms', e.target.value)} className={inp} />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Maydon m²</label>
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5">m²</label>
             <input type="number" value={form.area} onChange={e => handleChange('area', e.target.value)} className={inp} />
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Qavat (joriy/jami)</label>
-            <div className="flex gap-2 items-center">
-              <input type="number" value={form.floor} onChange={e => handleChange('floor', e.target.value)} placeholder="1"
-                className="w-full px-3 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-              <span className="text-gray-400 text-sm">/</span>
-              <input type="number" value={form.totalFloors} onChange={e => handleChange('totalFloors', e.target.value)} placeholder="9"
-                className="w-full px-3 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1.5">Tur</label>
-              <select value={form.type} onChange={e => handleChange('type', e.target.value)}
-                className="w-full px-3 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-                <option value="sotish">Sotish</option>
-                <option value="ijara">Ijara</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1.5">Holat</label>
-              <select value={form.status} onChange={e => handleChange('status', e.target.value)}
-                className="w-full px-3 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-                <option value="yangi">Yangi</option>
-                <option value="foydalanilgan">Foydalanilgan</option>
-                <option value="qurilayotgan">Qurilayotgan</option>
-              </select>
-            </div>
-          </div>
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 mb-1.5">Telefon</label>
+          <input type="tel" value={form.phone} onChange={e => handleChange('phone', e.target.value)} className={inp} />
+        </div>
+
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 mb-1.5">Egasi</label>
+          <input type="text" value={form.owner} onChange={e => handleChange('owner', e.target.value)} className={inp} />
         </div>
 
         <div>
@@ -180,64 +209,14 @@ export default function EditHouse() {
           <textarea value={form.description} onChange={e => handleChange('description', e.target.value)} rows={3} className={inp} />
         </div>
 
-        <div>
-          <label className="block text-xs font-semibold text-gray-600 mb-2">Imkoniyatlar</label>
-          <div className="flex flex-wrap gap-2">
-            {allFeatures.map(feat => (
-              <button key={feat} type="button" onClick={() => toggleFeature(feat)}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-colors
-                  ${form.features.includes(feat) ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'}`}>
-                {feat}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-xs font-semibold text-gray-600 mb-1.5">Rasm URL</label>
-          <div className="flex gap-2">
-            <input type="url" value={imageUrl} onChange={e => setImageUrl(e.target.value)}
-              placeholder="https://..." className="flex-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-            <button type="button" onClick={() => { haptic('light'); if (imageUrl.trim()) { setForm(f => ({ ...f, images: [...f.images, imageUrl.trim()] })); setImageUrl(''); } }}
-              className="px-4 py-3 bg-gray-100 rounded-xl">
-              <Upload size={17} />
-            </button>
-          </div>
-          {form.images.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-2">
-              {form.images.map((img, i) => (
-                <div key={i} className="relative">
-                  <img src={img} alt="" className="w-20 h-16 object-cover rounded-xl" />
-                  <button type="button"
-                    onClick={() => { haptic('light'); setForm(f => ({ ...f, images: f.images.filter((_, j) => j !== i) })); }}
-                    className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center">
-                    <X size={11} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Telefon</label>
-            <input type="tel" value={form.phone} onChange={e => handleChange('phone', e.target.value)} className={inp} />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Egasi</label>
-            <input type="text" value={form.owner} onChange={e => handleChange('owner', e.target.value)} className={inp} />
-          </div>
-        </div>
-
         <div className="flex gap-3 pt-2">
-          <button type="button" onClick={() => { haptic('light'); navigate(-1); }}
+          <button type="button" onClick={() => navigate(-1)}
             className="flex-1 py-3.5 rounded-xl border border-gray-200 font-semibold text-sm text-gray-700 bg-white active:bg-gray-50">
             Bekor qilish
           </button>
-          <button type="submit" disabled={submitting}
+          <button type="submit" disabled={submitting || uploading}
             className={`flex-1 py-3.5 rounded-xl font-semibold text-sm transition-colors
-              ${submitting ? 'bg-gray-300 text-gray-500' : 'bg-blue-600 text-white active:bg-blue-700'}`}>
+              ${submitting ? 'bg-gray-300 text-gray-500' : 'bg-amber-500 text-white active:bg-amber-600'}`}>
             {submitting ? 'Saqlanmoqda...' : 'Saqlash'}
           </button>
         </div>

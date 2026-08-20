@@ -10,6 +10,9 @@ lerna-debug.log*
 # Bot uchun JSON ma'lumotlar (faqat root /data papkasi)
 /data/
 
+# Yuklangan rasmlar
+/uploads/
+
 node_modules
 dist
 dist-ssr

@@ -15,36 +15,26 @@ bot.use(session());
 
 const ROLES = { talaba: 'Talaba', sotuvchi: 'Sotuvchi', boshqa: 'Oddiy foydalanuvchi' };
 
-const mainMenu = (ctx) => {
-  const user = ctx.session.user;
+const mainMenu = () => {
   return Markup.inlineKeyboard([
-    [Markup.button.webApp('🏠 Kvartira.uz — ochish', APP_URL)],
-    [
-      Markup.button.callback('📋 E\'lonlar', 'list'),
-      Markup.button.callback('🔍 Qidirish', 'search'),
-    ],
-    [
-      Markup.button.callback('🎓 Talabalar', 'student'),
-      user
-        ? Markup.button.callback('👤 Profil', 'profile')
-        : Markup.button.callback('🔑 Kirish', 'login'),
-    ],
+    [Markup.button.webApp('🏠 Hamroh — ochish', APP_URL)],
   ]);
 };
 
 const welcomeText = (ctx) => {
   const user = ctx.session.user;
   if (user) {
-    return `Salom, ${user.name}! 👋\nKvartira.uz ga xush kelibsiz.`;
+    return `Salom, ${user.name}! 👋\nHamroh ga xush kelibsiz.`;
   }
-  return `Kvartira.uz — uy topish oson! 🏠\n\nSotish va ijara e'lonlari, talabalar uchun maxsus takliflar.`;
+  return `Hamroh — uy topish oson! 🏠\n\nSotish va ijara e'lonlari, talabalar uchun maxsus takliflar.`;
 };
 
 bot.start(async (ctx) => {
   ctx.session = ctx.session || {};
   ctx.session.user = null;
   ctx.session.stage = null;
-  await ctx.reply(welcomeText(ctx), mainMenu(ctx));
+  await ctx.reply(welcomeText(ctx));
+  await ctx.reply('🏠 Hamroh ilovasini ochish uchun pastdagi tugmani bosing:', mainMenu());
 });
 
 bot.help(async (ctx) => {
@@ -53,8 +43,6 @@ bot.help(async (ctx) => {
     `/start - Asosiy menyu\n` +
     `/register - Ro'yxatdan o'tish\n` +
     `/login - Tizimga kirish\n` +
-    `/houses - Barcha e'lonlar\n` +
-    `/student - Talabalar uchun ijara\n` +
     `/logout - Chiqish\n` +
     `/help - Yordam`
   );
@@ -84,7 +72,7 @@ bot.command('logout', async (ctx) => {
   ctx.session = ctx.session || {};
   ctx.session.user = null;
   ctx.session.stage = null;
-  await ctx.reply('Chiqdingiz. Xayr! 👋', mainMenu(ctx));
+  await ctx.reply('Chiqdingiz. Xayr! 👋', mainMenu());
 });
 
 // ---------- REGISTRATION FLOW ----------
@@ -127,7 +115,7 @@ const finishRegister = async (ctx) => {
     `Email: ${newUser.email}\n` +
     `Rol: ${ROLES[newUser.role]}\n\n` +
     `Endi asosiy menyudan foydalanishingiz mumkin:`,
-    mainMenu(ctx)
+    mainMenu()
   );
 };
 
@@ -154,78 +142,17 @@ bot.action('role_boshqa', async (ctx) => {
 
 // ---------- MAIN MENU ACTIONS ----------
 
-bot.action('list', async (ctx) => {
-  await ctx.answerCbQuery();
-  await ctx.reply(
-    `📋 Barcha e'lonlarni ko'rish uchun Mini App ni oching:`,
-    Markup.inlineKeyboard([
-      [Markup.button.webApp('🏠 E\'lonlarni ko\'rish', APP_URL + '/houses')],
-      [{ text: '🔙 Orqaga', callback_data: 'menu' }]
-    ])
-  );
-});
-
-bot.action('student', async (ctx) => {
-  await ctx.answerCbQuery();
-  await ctx.reply(
-    `🎓 Talabalar uchun ijara e'lonlarini ko'rish:`,
-    Markup.inlineKeyboard([
-      [Markup.button.webApp('🎓 Talabalar uchun', APP_URL + '/houses?type=ijara')],
-      [{ text: '🔙 Orqaga', callback_data: 'menu' }]
-    ])
-  );
-});
-
-bot.action('search', async (ctx) => {
-  await ctx.answerCbQuery();
-  await ctx.reply(
-    `🔍 Qidirish uchun Mini App ni oching:`,
-    Markup.inlineKeyboard([
-      [Markup.button.webApp('🔍 Qidirish', APP_URL + '/houses')],
-      [{ text: '🔙 Orqaga', callback_data: 'menu' }]
-    ])
-  );
-});
-
-bot.action('add', async (ctx) => {
-  await ctx.answerCbQuery();
-  await ctx.reply(
-    `➕ E'lon qo'shish uchun Mini App ni oching:`,
-    Markup.inlineKeyboard([
-      [Markup.button.webApp('➕ E\'lon qo\'shish', APP_URL + '/add-house')],
-      [{ text: '🔙 Orqaga', callback_data: 'menu' }]
-    ])
-  );
-});
-
-bot.action('profile', async (ctx) => {
-  await ctx.answerCbQuery();
-  await ctx.reply(
-    `👤 Profil va e'lonlarni boshqarish:`,
-    Markup.inlineKeyboard([
-      [Markup.button.webApp('👤 Profilim', APP_URL + '/profile')],
-      [{ text: '🔙 Orqaga', callback_data: 'menu' }]
-    ])
-  );
-});
-
-bot.action('logout', async (ctx) => {
-  await ctx.answerCbQuery();
-  ctx.session.user = null;
-  ctx.session.stage = null;
-  await ctx.reply('Chiqdingiz. Xayr! 👋', mainMenu(ctx));
-});
-
 bot.action('login', async (ctx) => {
   await ctx.answerCbQuery();
   ctx.session.stage = 'login_email';
   await ctx.reply('🔑 Tizimga kirish\n\nEmailingizni kiriting:');
 });
 
-bot.action('menu', async (ctx) => {
+bot.action('cancel', async (ctx) => {
   await ctx.answerCbQuery();
   ctx.session.stage = null;
-  await ctx.reply('Asosiy menyu:', mainMenu(ctx));
+  ctx.session.newHouse = null;
+  await ctx.reply('Bekor qilindi.', mainMenu());
 });
 
 // ---------- CITY SEARCH ----------
@@ -235,12 +162,12 @@ cities.forEach(city => {
     await ctx.answerCbQuery();
     const result = getHouses().filter(h => h.city === city);
     if (result.length === 0) {
-      return ctx.reply(`«${city}» bo'yicha e'lon topilmadi.`, Markup.inlineKeyboard([[{ text: '🔙 Orqaga', callback_data: 'menu' }]]));
+      return ctx.reply(`«${city}» bo'yicha e'lon topilmadi.`);
     }
     const rows = result.slice(0, 10).map(h =>
       Markup.button.callback(`${h.type === 'ijara' ? '🏠' : '🏢'} ${h.title.slice(0, 30)} - ${h.price.toLocaleString()} so'm`, `house_${h.id}`)
     );
-    await ctx.reply(`📍 «${city}» bo'yicha e'lonlar (${result.length} ta):`, Markup.inlineKeyboard([...rows.map(r => [r]), [{ text: '🔙 Orqaga', callback_data: 'menu' }]]));
+    await ctx.reply(`📍 «${city}» bo'yicha e'lonlar (${result.length} ta):`, Markup.inlineKeyboard([...rows.map(r => [r])]));
   });
 });
 
@@ -260,20 +187,8 @@ bot.action(/house_(\d+)/, async (ctx) => {
     `📝 Tavsif: ${house.description}\n` +
     (house.studentFriendly ? `🎓 Talabalar uchun qulay!\n` : '') +
     `📞 Telefon: ${house.phone}\n` +
-    `👤 Egalik: ${house.owner}`,
-    Markup.inlineKeyboard([
-      [Markup.button.callback('📞 Boglanish', `contact_${house.id}`)],
-      [{ text: '🔙 Orqaga', callback_data: 'list' }]
-    ])
+    `👤 Egalik: ${house.owner}`
   );
-});
-
-bot.action(/contact_(\d+)/, async (ctx) => {
-  await ctx.answerCbQuery();
-  const id = Number(ctx.match[1]);
-  const house = getHouses().find(h => h.id === id);
-  if (!house) return ctx.reply('E\'lon topilmadi.');
-  await ctx.reply(`📞 ${house.owner}: ${house.phone}`);
 });
 
 // ---------- ADD HOUSE FLOW ----------
@@ -283,7 +198,6 @@ const askHouseType = async (ctx) => {
   await ctx.reply('E\'lon turini tanlang:', Markup.inlineKeyboard([
     [Markup.button.callback('🏠 Ijara', 'htype_ijara')],
     [Markup.button.callback('🏢 Sotish', 'htype_sotish')],
-    [{ text: '❌ Bekor qilish', callback_data: 'cancel' }]
   ]));
 };
 
@@ -307,7 +221,7 @@ bot.action('cancel', async (ctx) => {
   await ctx.answerCbQuery();
   ctx.session.stage = null;
   ctx.session.newHouse = null;
-  await ctx.reply('Bekor qilindi.', mainMenu(ctx));
+  await ctx.reply('Bekor qilindi.', mainMenu());
 });
 
 // ---------- TEXT FLOW HANDLER ----------
@@ -350,7 +264,7 @@ bot.on('text', async (ctx) => {
     const found = findUserByEmail(text);
     if (!found) {
       ctx.session.stage = null;
-      return ctx.reply('Bu email tizimda topilmadi. Avval ro\'yxatdan o\'ting: /register', mainMenu(ctx));
+      return ctx.reply('Bu email tizimda topilmadi. Avval ro\'yxatdan o\'ting: /register', mainMenu());
     }
     ctx.session.loginCandidate = found;
     ctx.session.stage = 'login_password';
@@ -362,12 +276,12 @@ bot.on('text', async (ctx) => {
     if (found.password !== text) {
       ctx.session.stage = null;
       ctx.session.loginCandidate = null;
-      return ctx.reply('Parol noto\'g\'ri. Qayta urinib ko\'ring: /login', mainMenu(ctx));
+      return ctx.reply('Parol noto\'g\'ri. Qayta urinib ko\'ring: /login', mainMenu());
     }
     ctx.session.user = found;
     ctx.session.stage = null;
     ctx.session.loginCandidate = null;
-    return ctx.reply(`✅ Xush kelibsiz, ${found.name}! Siz muvaffaqiyatli kirdingiz.`, mainMenu(ctx));
+    return ctx.reply(`✅ Xush kelibsiz, ${found.name}! Siz muvaffaqiyatli kirdingiz.`, mainMenu());
   }
 
   // Add house flow
@@ -375,7 +289,6 @@ bot.on('text', async (ctx) => {
     ctx.session.newHouse.title = text;
     return ctx.reply('Shaharni tanlang:', Markup.inlineKeyboard([
       ...cities.slice(0, 5).map(c => [Markup.button.callback(c, `addcity_${c}`)]),
-      [{ text: '❌ Bekor qilish', callback_data: 'cancel' }]
     ]));
   }
 
@@ -422,7 +335,7 @@ bot.on('text', async (ctx) => {
       `💰 ${nh.price.toLocaleString()} so'm${nh.type === 'ijara' ? '/oy' : ''}\n` +
       `🛏 ${nh.rooms} xona, ${nh.area} m²\n\n` +
       `Endi boshqa bo'limlardan foydalanishingiz mumkin:`,
-      mainMenu(ctx)
+      mainMenu()
     );
   }
 
@@ -435,33 +348,24 @@ bot.on('text', async (ctx) => {
       const rows = result.slice(0, 10).map(h =>
         Markup.button.callback(`${h.type === 'ijara' ? '🏠' : '🏢'} ${h.title.slice(0, 30)} - ${h.price.toLocaleString()} so'm`, `house_${h.id}`)
       );
-      return ctx.reply(`📍 «${found}» bo'yicha e'lonlar:`, Markup.inlineKeyboard([...rows.map(r => [r]), [{ text: '🔙 Orqaga', callback_data: 'menu' }]]));
+      return ctx.reply(`📍 «${found}» bo'yicha e'lonlar:`, Markup.inlineKeyboard([...rows.map(r => [r])]));
     }
     return ctx.reply('Bunday shahar topilmadi. Ro\'yxatdan tanlang:', Markup.inlineKeyboard([
       ...cities.slice(0, 5).map(c => [Markup.button.callback(c, `city_${c}`)]),
-      [{ text: '🔙 Orqaga', callback_data: 'menu' }]
-    ]));
-  }
-
-  // Add house city callback
-  if (stage === 'add_title') {
-    return ctx.reply('Shaharni tanlang:', Markup.inlineKeyboard([
-      ...cities.slice(0, 5).map(c => [Markup.button.callback(c, `addcity_${c}`)]),
-      [{ text: '❌ Bekor qilish', callback_data: 'cancel' }]
     ]));
   }
 
   // No active stage
   const lower = text.toLowerCase();
   if (lower === 'salom' || lower === 'hello' || lower === 'assalomu alaykum') {
-    return ctx.reply('Assalomu alaykum! 👋', mainMenu(ctx));
+    return ctx.reply('Assalomu alaykum! 👋', mainMenu());
   }
   if (lower === '🔑 kirish' || lower === 'kirish') {
     ctx.session.stage = 'login_email';
     return ctx.reply('🔑 Emailingizni kiriting:');
   }
 
-  await ctx.reply('Tushunmadim 🤔. Asosiy menyudan foydalaning:', mainMenu(ctx));
+  await ctx.reply('Tushunmadim 🤔. Asosiy menyudan foydalaning:', mainMenu());
 });
 
 // Add house city selections
@@ -486,7 +390,7 @@ async function setupMenuButton() {
     await bot.telegram.callApi('setChatMenuButton', {
       menu_button: {
         type: 'web_app',
-        text: '🏠 Kvartira',
+        text: '🏠 Hamroh',
         web_app: { url: APP_URL }
       }
     });
@@ -497,7 +401,7 @@ async function setupMenuButton() {
 }
 
 bot.launch().then(() => {
-  console.log('✅ Kvartira Telegram bot ishga tushdi!');
+  console.log('✅ Hamroh Telegram bot ishga tushdi!');
   setupMenuButton();
 });
 
