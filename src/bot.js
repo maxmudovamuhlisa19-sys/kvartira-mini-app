@@ -156,41 +156,32 @@ bot.action('role_boshqa', async (ctx) => {
 
 bot.action('list', async (ctx) => {
   await ctx.answerCbQuery();
-  const list = getHouses();
-  if (list.length === 0) return ctx.reply('Hozircha e\'lonlar yo\'q.');
-  const rows = list.slice(0, 10).map((h) =>
-    Markup.button.callback(
-      `${h.type === 'ijara' ? '🏠' : '🏢'} ${h.title.slice(0, 30)} - ${h.price.toLocaleString()} so'm`,
-      `house_${h.id}`
-    )
+  await ctx.reply(
+    `📋 Barcha e'lonlarni ko'rish uchun Mini App ni oching:`,
+    Markup.inlineKeyboard([
+      [Markup.button.webApp('🏠 E\'lonlarni ko\'rish', APP_URL + '/houses')],
+      [{ text: '🔙 Orqaga', callback_data: 'menu' }]
+    ])
   );
-  await ctx.reply(`📋 Barcha e'lonlar (${list.length} ta):`, Markup.inlineKeyboard([...rows.map(r => [r]), [{ text: '🔙 Orqaga', callback_data: 'menu' }]]));
 });
 
 bot.action('student', async (ctx) => {
   await ctx.answerCbQuery();
-  const student = getHouses().filter(h => h.type === 'ijara' && h.studentFriendly);
-  if (student.length === 0) return ctx.reply('Hozircha talabalar uchun e\'lonlar yo\'q.');
-  const rows = student.map((h) =>
-    Markup.button.callback(
-      `🎓 ${h.title.slice(0, 30)} - ${h.price.toLocaleString()} so'm/oy`,
-      `house_${h.id}`
-    )
-  );
   await ctx.reply(
-    `🎓 Talabalar uchun maxsus ijara e'lonlari (${student.length} ta):\n\n` +
-    `Bu e'lonlar talabalar uchun arzon narxlarda!`,
-    Markup.inlineKeyboard([...rows.map(r => [r]), [{ text: '🔙 Orqaga', callback_data: 'menu' }]])
+    `🎓 Talabalar uchun ijara e'lonlarini ko'rish:`,
+    Markup.inlineKeyboard([
+      [Markup.button.webApp('🎓 Talabalar uchun', APP_URL + '/houses?type=ijara')],
+      [{ text: '🔙 Orqaga', callback_data: 'menu' }]
+    ])
   );
 });
 
 bot.action('search', async (ctx) => {
   await ctx.answerCbQuery();
-  ctx.session.stage = 'search_city';
   await ctx.reply(
-    '🔍 Qaysi shahar bo\'yicha qidirmoqchisiz?',
+    `🔍 Qidirish uchun Mini App ni oching:`,
     Markup.inlineKeyboard([
-      ...cities.slice(0, 5).map(c => [Markup.button.callback(c, `city_${c}`)]),
+      [Markup.button.webApp('🔍 Qidirish', APP_URL + '/houses')],
       [{ text: '🔙 Orqaga', callback_data: 'menu' }]
     ])
   );
@@ -198,31 +189,22 @@ bot.action('search', async (ctx) => {
 
 bot.action('add', async (ctx) => {
   await ctx.answerCbQuery();
-  if (!ctx.session.user) {
-    ctx.session.stage = null;
-    return ctx.reply('E\'lon qo\'shish uchun avval ro\'yxatdan o\'ting: /register', mainMenu(ctx));
-  }
-  ctx.session.stage = 'add_title';
-  ctx.session.newHouse = {};
-  await ctx.reply('➕ Yangi e\'lon qo\'shish\n\nKvartira nomini kiriting:');
+  await ctx.reply(
+    `➕ E'lon qo'shish uchun Mini App ni oching:`,
+    Markup.inlineKeyboard([
+      [Markup.button.webApp('➕ E\'lon qo\'shish', APP_URL + '/add-house')],
+      [{ text: '🔙 Orqaga', callback_data: 'menu' }]
+    ])
+  );
 });
 
 bot.action('profile', async (ctx) => {
   await ctx.answerCbQuery();
-  const user = ctx.session.user;
-  if (!user) {
-    return ctx.reply('Profilni ko\'rish uchun avval kiring: /login', mainMenu(ctx));
-  }
-  const myHouses = getHouses().filter(h => h.ownerId === user.id);
   await ctx.reply(
-    `👤 Profilim\n\n` +
-    `Ism: ${user.name}\n` +
-    `Email: ${user.email}\n` +
-    `Telefon: ${user.phone}\n` +
-    `Rol: ${ROLES[user.role] || user.role}\n` +
-    `Mening e'lonlarim: ${myHouses.length} ta`,
+    `👤 Profil va e'lonlarni boshqarish:`,
     Markup.inlineKeyboard([
-      [Markup.button.callback('🔙 Orqaga', 'menu')]
+      [Markup.button.webApp('👤 Profilim', APP_URL + '/profile')],
+      [{ text: '🔙 Orqaga', callback_data: 'menu' }]
     ])
   );
 });
