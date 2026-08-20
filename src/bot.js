@@ -18,22 +18,26 @@ const ROLES = { talaba: 'Talaba', sotuvchi: 'Sotuvchi', boshqa: 'Oddiy foydalanu
 const mainMenu = (ctx) => {
   const user = ctx.session.user;
   return Markup.inlineKeyboard([
-    [Markup.button.webApp('🚀 Mini App ni ochish', APP_URL)],
-    [Markup.button.callback('🏠 E\'lonlarni ko\'rish', 'list')],
-    [Markup.button.callback('🎓 Talabalar uchun ijara', 'student')],
-    [Markup.button.callback('🔍 Qidirish', 'search')],
-    [Markup.button.callback('➕ E\'lon qo\'shish', 'add')],
-    [Markup.button.callback('👤 Profilim', 'profile')],
-    user ? [Markup.button.callback('🚪 Chiqish', 'logout')] : [Markup.button.callback('🔑 Kirish', 'login')]
+    [Markup.button.webApp('🏠 Kvartira.uz — ochish', APP_URL)],
+    [
+      Markup.button.callback('📋 E\'lonlar', 'list'),
+      Markup.button.callback('🔍 Qidirish', 'search'),
+    ],
+    [
+      Markup.button.callback('🎓 Talabalar', 'student'),
+      user
+        ? Markup.button.callback('👤 Profil', 'profile')
+        : Markup.button.callback('🔑 Kirish', 'login'),
+    ],
   ]);
 };
 
 const welcomeText = (ctx) => {
   const user = ctx.session.user;
   if (user) {
-    return `Assalomu alaykum, ${user.name}! 👋\n\nSiz tizimda ro'yxatdan o'tgansiz. Quyidagi bo'limlardan birini tanlang:`;
+    return `Salom, ${user.name}! 👋\nKvartira.uz ga xush kelibsiz.`;
   }
-  return `Assalomu alaykum! 👋\n\nKvartira botiga xush kelibsiz!\n\nBu botda:\n🏠 Kvartira sotib olish va ijaraga olish\n🎓 Talabalar uchun maxsus ijara e'lonlari\n\nIltimos, avval ro'yxatdan o'ting yoki kiring.`;
+  return `Kvartira.uz — uy topish oson! 🏠\n\nSotish va ijara e'lonlari, talabalar uchun maxsus takliflar.`;
 };
 
 bot.start(async (ctx) => {
