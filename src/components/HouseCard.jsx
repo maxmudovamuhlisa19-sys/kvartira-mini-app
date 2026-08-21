@@ -15,7 +15,7 @@ export default function HouseCard({ house }) {
     <Link
       to={`/house/${house.id}`}
       onClick={() => haptic('light')}
-      className="block bg-white rounded-xl border border-amber-200 overflow-hidden"
+      className="block bg-white rounded-xl border border-amber-200 overflow-hidden shadow-sm"
     >
       <div className="flex">
         <img
