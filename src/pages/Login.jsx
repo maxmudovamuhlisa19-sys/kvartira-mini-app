@@ -36,16 +36,30 @@ export default function Login() {
     else setError(result.error);
   };
 
+  const fillDemo = () => {
+    haptic('light');
+    setForm({ email: 'alisher@mail.com', password: '123456' });
+  };
+
   return (
     <div className="px-4 pt-6 pb-6">
-      {/* Telegram kirish — faqat Telegram ichida */}
+      {/* Demo kirish — eng yuqorida */}
+      <button
+        type="button"
+        onClick={fillDemo}
+        className="w-full flex items-center justify-center gap-2 bg-amber-500 text-white py-3.5 rounded-2xl font-bold text-sm active:bg-amber-600 transition-colors mb-4"
+      >
+        Demo kirish
+      </button>
+
+      {/* Telegram kirish */}
       {inTg && (
-        <div className="mb-5">
+        <div className="mb-4">
           <button
             type="button"
             onClick={handleTgLogin}
             disabled={tgLoading}
-            className="w-full bg-[#0088cc] text-white py-4 rounded-2xl font-bold text-base flex items-center justify-center gap-2 active:opacity-90 transition-opacity disabled:opacity-60"
+            className="w-full bg-[#0088cc] text-white py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 active:opacity-90 transition-opacity disabled:opacity-60"
           >
             {tgLoading ? (
               <span className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
@@ -54,7 +68,7 @@ export default function Login() {
             )}
             {tgLoading ? 'Kirilmoqda...' : 'Telegram orqali kirish'}
           </button>
-          <div className="flex items-center gap-3 my-5">
+          <div className="flex items-center gap-3 my-4">
             <div className="flex-1 h-px bg-gray-200" />
             <span className="text-xs text-gray-400 font-medium">yoki email bilan</span>
             <div className="flex-1 h-px bg-gray-200" />
@@ -116,21 +130,6 @@ export default function Login() {
         <Link to="/register" className="text-amber-600 font-semibold text-sm" onClick={() => haptic('light')}>
           Ro'yxatdan o'ting
         </Link>
-      </div>
-
-      {/* Demo */}
-      <div className="mt-5 p-4 bg-amber-50 border border-amber-200 rounded-xl">
-        <p className="text-xs font-semibold text-amber-700 mb-1.5">Demo kirish:</p>
-        <button
-          type="button"
-          onClick={() => {
-            haptic('light');
-            setForm({ email: 'alisher@mail.com', password: '123456' });
-          }}
-          className="text-xs text-amber-700 font-medium bg-amber-100 px-3 py-1.5 rounded-lg active:bg-amber-200"
-        >
-          alisher@mail.com / 123456 — Bosing
-        </button>
       </div>
     </div>
   );
