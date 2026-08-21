@@ -23,32 +23,32 @@ export default function HouseCard({ house }) {
         <img
           src={images[0]}
           alt={house.title}
-          className="w-full h-44 object-cover"
+          className="w-full h-52 object-cover"
           loading="lazy"
         />
-        {/* Type badge */}
-        <div className={`absolute top-3 left-3 px-3 py-1 rounded-lg text-xs font-bold
+        <div className={`absolute top-3 left-3 px-3 py-1.5 rounded-lg text-xs font-bold
           ${house.type === 'sotish' ? 'bg-amber-500 text-white' : 'bg-orange-500 text-white'}`}>
           {house.type === 'sotish' ? 'Sotish' : 'Ijara'}
         </div>
       </div>
 
       {/* Content */}
-      <div className="p-4">
-        <h3 className="text-base font-bold text-gray-900 leading-tight">{house.title}</h3>
-        <div className="flex items-center gap-1.5 mt-2 text-gray-500">
-          <MapPin size={14} className="text-amber-500 flex-shrink-0" />
-          <span className="text-sm truncate">{house.address}</span>
+      <div className="p-5">
+        <h3 className="text-lg font-bold text-gray-900 leading-snug mb-2">{house.title}</h3>
+
+        <div className="flex items-center gap-1.5 mb-4">
+          <MapPin size={15} className="text-amber-500 flex-shrink-0" />
+          <span className="text-sm text-gray-500">{house.address}</span>
         </div>
 
         {/* Specs */}
-        <div className="flex items-center gap-4 mt-3 pt-3 border-t border-gray-100">
-          <div className="flex items-center gap-1.5">
-            <BedDouble size={16} className="text-gray-400" />
+        <div className="flex items-center gap-5 mb-4">
+          <div className="flex items-center gap-2">
+            <BedDouble size={18} className="text-gray-400" />
             <span className="text-sm font-medium text-gray-700">{house.rooms} xona</span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <Maximize size={16} className="text-gray-400" />
+          <div className="flex items-center gap-2">
+            <Maximize size={18} className="text-gray-400" />
             <span className="text-sm font-medium text-gray-700">{house.area} m²</span>
           </div>
           {house.floor && (
@@ -57,8 +57,8 @@ export default function HouseCard({ house }) {
         </div>
 
         {/* Price */}
-        <div className="mt-3">
-          <span className="text-lg font-extrabold text-amber-600">{priceText}</span>
+        <div className="pt-3 border-t border-gray-100">
+          <span className="text-xl font-extrabold text-amber-600">{priceText}</span>
         </div>
       </div>
     </Link>
