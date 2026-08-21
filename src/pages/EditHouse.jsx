@@ -15,7 +15,6 @@ function getFormFromHouse(house) {
     city: house?.city || '',
     price: house?.price || '',
     rooms: house?.rooms || '',
-    area: house?.area || '',
     type: house?.type || 'sotish',
     description: house?.description || '',
     phone: house?.phone || '',
@@ -105,7 +104,6 @@ export default function EditHouse() {
       ...form,
       price: Number(form.price),
       rooms: Number(form.rooms),
-      area: Number(form.area),
       images,
     });
     setSubmitting(false);
@@ -179,7 +177,7 @@ export default function EditHouse() {
           <input type="text" value={form.address} onChange={e => handleChange('address', e.target.value)} className={inp} />
         </div>
 
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block text-xs font-semibold text-gray-600 mb-1.5">Narx</label>
             <input type="number" value={form.price} onChange={e => handleChange('price', e.target.value)} className={inp} />
@@ -187,10 +185,6 @@ export default function EditHouse() {
           <div>
             <label className="block text-xs font-semibold text-gray-600 mb-1.5">Xona</label>
             <input type="number" value={form.rooms} onChange={e => handleChange('rooms', e.target.value)} className={inp} />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1.5">m²</label>
-            <input type="number" value={form.area} onChange={e => handleChange('area', e.target.value)} className={inp} />
           </div>
         </div>
 

@@ -20,7 +20,6 @@ export default function AddHouse() {
     city: 'Navoiy',
     price: '',
     rooms: '',
-    area: '',
     type: 'sotish',
     description: '',
     phone: user?.phone || '',
@@ -37,7 +36,6 @@ export default function AddHouse() {
     if (!form.city) e.city = 'Shahar tanlang';
     if (!form.price || form.price <= 0) e.price = "Narx noto'g'ri";
     if (!form.rooms || form.rooms <= 0) e.rooms = "Xonalar soni noto'g'ri";
-    if (!form.area || form.area <= 0) e.area = "Maydon noto'g'ri";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -102,7 +100,6 @@ export default function AddHouse() {
       ...form,
       price: Number(form.price),
       rooms: Number(form.rooms),
-      area: Number(form.area),
       images: images.length > 0 ? images : [
         'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800',
       ],
@@ -205,8 +202,8 @@ export default function AddHouse() {
             className={inp('address')} />
         </div>
 
-        {/* Narx, Xona, Maydon */}
-        <div className="grid grid-cols-3 gap-3">
+        {/* Narx, Xona */}
+        <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block text-xs font-semibold text-gray-600 mb-1.5">Narx *</label>
             <input type="number" value={form.price}
@@ -220,13 +217,6 @@ export default function AddHouse() {
               onChange={e => handleChange('rooms', e.target.value)}
               placeholder="1" className={inp('rooms')} />
             {errors.rooms && <p className="text-red-500 text-xs mt-1">{errors.rooms}</p>}
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1.5">m² *</label>
-            <input type="number" value={form.area}
-              onChange={e => handleChange('area', e.target.value)}
-              placeholder="0" className={inp('area')} />
-            {errors.area && <p className="text-red-500 text-xs mt-1">{errors.area}</p>}
           </div>
         </div>
 

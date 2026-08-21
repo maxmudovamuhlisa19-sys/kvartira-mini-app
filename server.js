@@ -175,7 +175,7 @@ app.get('/api/houses', (req, res) => {
 });
 
 app.post('/api/houses', (req, res) => {
-  const { title, city, address, price, rooms, area, type, description, phone, userId } = req.body || {};
+  const { title, city, address, price, rooms, type, description, phone, userId } = req.body || {};
   if (!title || !city || !price || !rooms || !type) {
     return res.status(400).json({ error: "Kerakli maydonlar to'ldirilmagan" });
   }
@@ -186,7 +186,6 @@ app.post('/api/houses', (req, res) => {
     address: address || '',
     price: Number(price) || 0,
     rooms: Number(rooms) || 1,
-    area: Number(area) || 0,
     type,
     description: description || '',
     phone: phone || '',
@@ -211,6 +210,68 @@ app.delete('/api/houses/:id', (req, res) => {
 
 app.get('/api/users', (req, res) => {
   res.json(getUsers().map(u => ({ id: u.id, name: u.name, email: u.email, phone: u.phone, role: u.role })));
+});
+
+// ---------- TELEGRAM VERIFICATION CODE ----------
+
+const pendingCodes = new Map(); // phone -> { code, userId, expires }
+
+function generateCode() {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+async function sendTelegramMessage(chatId, text) {
+  try {
+    const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML' }),
+    });
+    return res.ok;
+  } catch (e) {
+    console.error('Telegram send error:', e.message);
+    return false;
+  }
+}
+
+app.post('/api/send-code', async (req, res) => {
+  const { telegramId } = req.body || {};
+  if (!telegramId) return res.status(400).json({ error: 'Telegram ID topilmadi' });
+
+  const code = generateCode();
+  const expires = Date.now() + 5 * 60 * 1000; // 5 minutes
+  pendingCodes.set(String(telegramId), { code, expires });
+
+  const sent = await sendTelegramMessage(telegramId,
+    `🔐 <b>Hamroh tasdiqlash kodi</b>\n\nKodingiz: <code>${code}</code>\n\nBu kod 5 daqiqa amal qiladi. Hech kimga bermang!`
+  );
+
+  if (sent) {
+    res.json({ success: true, message: 'Kod Telegramga yuborildi' });
+  } else {
+    pendingCodes.delete(String(telegramId));
+    res.status(400).json({ error: 'Kod yuborib bo\'lmadi. Botni start bosganingizga ishonchigingiz kom qiling.' });
+  }
+});
+
+app.post('/api/verify-code', (req, res) => {
+  const { telegramId, code } = req.body || {};
+  if (!telegramId || !code) return res.status(400).json({ error: 'Ma\'lumotlar yetarli emas' });
+
+  const key = String(telegramId);
+  const pending = pendingCodes.get(key);
+  if (!pending) return res.status(400).json({ error: 'Kod topilmadi. Qaytadan yuboring.' });
+  if (Date.now() > pending.expires) {
+    pendingCodes.delete(key);
+    return res.status(400).json({ error: 'Kod muddati tugadi. Qaytadan yuboring.' });
+  }
+  if (pending.code !== String(code).trim()) {
+    return res.status(400).json({ error: 'Noto\'g\'ri kod' });
+  }
+
+  pendingCodes.delete(key);
+  res.json({ success: true, verified: true });
 });
 
 // ---------- STATIC SITE ----------

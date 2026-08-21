@@ -110,10 +110,6 @@ export default function HouseDetail() {
             <div className="text-xs font-bold text-gray-900">{house.rooms}</div>
             <div className="text-[9px] text-gray-400">Xona</div>
           </div>
-          <div className="flex-1 bg-amber-50 rounded-lg p-2 text-center border border-amber-100">
-            <div className="text-xs font-bold text-gray-900">{house.area} m²</div>
-            <div className="text-[9px] text-gray-400">Maydon</div>
-          </div>
           {house.floor && (
             <div className="flex-1 bg-amber-50 rounded-lg p-2 text-center border border-amber-100">
               <div className="text-xs font-bold text-gray-900">{house.floor}/{house.totalFloors}</div>
