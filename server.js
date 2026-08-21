@@ -94,32 +94,49 @@ import { BOT_TOKEN } from './src/config.js';
 
 function verifyTelegramInitData(initData) {
   try {
-    const pairs = initData
-      .split('&')
-      .map(p => {
-        const i = p.indexOf('=');
-        return [p.slice(0, i), p.slice(i + 1)];
-      })
-      .filter(([k]) => k !== 'hash');
-    if (!initData.includes('hash=')) return null;
+    if (!initData || !initData.includes('hash=')) return null;
 
-    const hash = new URLSearchParams(initData).get('hash');
-    const dataCheckString = pairs
-      .sort((a, b) => a[0].localeCompare(b[0]))
-      .map(([k, v]) => `${k}=${v}`)
-      .join('\n');
+    const dataCheckArray = [];
+    let receivedHash = '';
+
+    const pairs = initData.split('&');
+    for (const pair of pairs) {
+      const eqIdx = pair.indexOf('=');
+      if (eqIdx === -1) continue;
+      const key = pair.slice(0, eqIdx);
+      const value = decodeURIComponent(pair.slice(eqIdx + 1));
+      if (key === 'hash') {
+        receivedHash = value;
+      } else {
+        dataCheckArray.push(`${key}=${value}`);
+      }
+    }
+
+    if (!receivedHash) return null;
+
+    dataCheckArray.sort();
+    const dataCheckString = dataCheckArray.join('\n');
+
     const secretKey = crypto
       .createHmac('sha256', 'WebAppData')
-      .update(crypto.createHash('sha256').update(BOT_TOKEN).digest())
+      .update(BOT_TOKEN)
       .digest();
+
     const calculatedHash = crypto
       .createHmac('sha256', secretKey)
       .update(dataCheckString)
       .digest('hex');
-    if (calculatedHash !== hash) return null;
-    const user = JSON.parse(decodeURIComponent(pairs.find(([k]) => k === 'user')?.[1] || 'null'));
-    return user;
-  } catch {
+
+    if (calculatedHash !== receivedHash) {
+      console.error('Telegram hash mismatch');
+      return null;
+    }
+
+    const userStr = new URLSearchParams(initData).get('user');
+    if (!userStr) return null;
+    return JSON.parse(userStr);
+  } catch (e) {
+    console.error('Telegram verify error:', e.message);
     return null;
   }
 }
