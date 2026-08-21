@@ -4,6 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
 import multer from 'multer';
+import fetch from 'node-fetch';
 import { fileURLToPath } from 'url';
 import {
   getHouses,
