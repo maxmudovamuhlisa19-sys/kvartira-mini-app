@@ -19,24 +19,24 @@ export default function Home() {
           <p className="text-amber-100 text-base mt-1 font-medium">Navoiy shahrida uy topish endi oson</p>
         </div>
 
-        {/* Search */}
-        <Link
-          to="/houses"
-          onClick={() => haptic('medium')}
-          className="flex items-center gap-3 bg-white/95 backdrop-blur-sm rounded-2xl px-5 py-4 shadow-lg"
-        >
-          <Search size={20} className="text-amber-500 flex-shrink-0" />
-          <span className="text-gray-400 text-base font-medium">Manzil, xonalar soni bo'yicha qidirish...</span>
-        </Link>
-
-        {/* E'lon berish */}
-        <Link
-          to={user ? '/add-house' : '/login'}
-          onClick={() => haptic('medium')}
-          className="mt-4 flex items-center justify-center gap-2 w-full bg-white/20 backdrop-blur-sm border border-white/30 text-white py-3.5 rounded-2xl font-bold text-base"
-        >
-          + E'lon berish
-        </Link>
+        {/* Search + E'lon berish */}
+        <div className="flex gap-3">
+          <Link
+            to="/houses"
+            onClick={() => haptic('medium')}
+            className="flex-[2] flex items-center gap-3 bg-white/95 backdrop-blur-sm rounded-2xl px-4 py-3.5 shadow-lg"
+          >
+            <Search size={18} className="text-amber-500 flex-shrink-0" />
+            <span className="text-gray-400 text-sm font-medium truncate">Qidirish...</span>
+          </Link>
+          <Link
+            to={user ? '/add-house' : '/login'}
+            onClick={() => haptic('medium')}
+            className="flex-[1] flex items-center justify-center gap-1.5 bg-white/20 backdrop-blur-sm border border-white/30 text-white py-3.5 rounded-2xl font-bold text-sm"
+          >
+            + E'lon
+          </Link>
+        </div>
       </div>
 
       {/* Kategoriyalar */}
