@@ -2,24 +2,15 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
-import { isTelegram, haptic } from '../telegram';
+import { haptic } from '../telegram';
 
 export default function Login() {
   const navigate = useNavigate();
-  const { login, tgLogin, tgLoading } = useAuth();
+  const { login } = useAuth();
   const [form, setForm] = useState({ email: '', password: '' });
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const inTg = isTelegram();
-
-  const handleTgLogin = async () => {
-    haptic('medium');
-    setError('');
-    const result = await tgLogin();
-    if (result.success) navigate('/', { replace: true });
-    else setError(result.error);
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -38,30 +29,6 @@ export default function Login() {
 
   return (
     <div className="px-4 pt-6 pb-6">
-      {/* Telegram kirish */}
-      {inTg && (
-        <>
-          <button
-            type="button"
-            onClick={handleTgLogin}
-            disabled={tgLoading}
-            className="w-full bg-[#0088cc] text-white py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 active:opacity-90 transition-opacity disabled:opacity-60"
-          >
-            {tgLoading ? (
-              <span className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-            ) : (
-              <span className="text-xl">✈️</span>
-            )}
-            {tgLoading ? 'Kirilmoqda...' : 'Telegram orqali kirish'}
-          </button>
-          <div className="flex items-center gap-3 my-4">
-            <div className="flex-1 h-px bg-gray-200" />
-            <span className="text-xs text-gray-400 font-medium">yoki email bilan</span>
-            <div className="flex-1 h-px bg-gray-200" />
-          </div>
-        </>
-      )}
-
       {/* Xato */}
       {error && (
         <div className="bg-red-50 text-red-600 px-4 py-3 rounded-xl mb-4 text-sm font-medium">
