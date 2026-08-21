@@ -36,22 +36,8 @@ export default function Login() {
     else setError(result.error);
   };
 
-  const fillDemo = () => {
-    haptic('light');
-    setForm({ email: 'alisher@mail.com', password: '123456' });
-  };
-
   return (
     <div className="px-4 pt-6 pb-6">
-      {/* Demo kirish */}
-      <button
-        type="button"
-        onClick={fillDemo}
-        className="w-full flex items-center justify-center gap-2 bg-amber-500 text-white py-3.5 rounded-2xl font-bold text-sm active:bg-amber-600 transition-colors mb-3"
-      >
-        Demo kirish
-      </button>
-
       {/* Telegram kirish */}
       {inTg && (
         <>
