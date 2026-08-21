@@ -4,7 +4,6 @@ import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
 import multer from 'multer';
-import fetch from 'node-fetch';
 import { fileURLToPath } from 'url';
 import {
   getHouses,
@@ -16,6 +15,7 @@ import {
   findUserById,
   getUsers
 } from './src/store.js';
+import { BOT_TOKEN } from './src/config.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -90,8 +90,6 @@ app.post('/api/login', (req, res) => {
 });
 
 // ---------- TELEGRAM MINI APP AUTH ----------
-
-import { BOT_TOKEN } from './src/config.js';
 
 function verifyTelegramInitData(initData) {
   try {
@@ -237,22 +235,27 @@ async function sendTelegramMessage(chatId, text) {
 }
 
 app.post('/api/send-code', async (req, res) => {
-  const { telegramId } = req.body || {};
-  if (!telegramId) return res.status(400).json({ error: 'Telegram ID topilmadi' });
+  try {
+    const { telegramId } = req.body || {};
+    if (!telegramId) return res.status(400).json({ error: 'Telegram ID topilmadi' });
 
-  const code = generateCode();
-  const expires = Date.now() + 5 * 60 * 1000; // 5 minutes
-  pendingCodes.set(String(telegramId), { code, expires });
+    const code = generateCode();
+    const expires = Date.now() + 5 * 60 * 1000;
+    pendingCodes.set(String(telegramId), { code, expires });
 
-  const sent = await sendTelegramMessage(telegramId,
-    `🔐 <b>Hamroh tasdiqlash kodi</b>\n\nKodingiz: <code>${code}</code>\n\nBu kod 5 daqiqa amal qiladi. Hech kimga bermang!`
-  );
+    const sent = await sendTelegramMessage(telegramId,
+      `🔐 <b>Hamroh tasdiqlash kodi</b>\n\nKodingiz: <code>${code}</code>\n\nBu kod 5 daqiqa amal qiladi. Hech kimga bermang!`
+    );
 
-  if (sent) {
-    res.json({ success: true, message: 'Kod Telegramga yuborildi' });
-  } else {
-    pendingCodes.delete(String(telegramId));
-    res.status(400).json({ error: 'Kod yuborib bo\'lmadi. Botni start bosganingizga ishonchigingiz kom qiling.' });
+    if (sent) {
+      res.json({ success: true, message: 'Kod Telegramga yuborildi' });
+    } else {
+      pendingCodes.delete(String(telegramId));
+      res.status(400).json({ error: 'Kod yuborib bo\'lmadi. Botni start bosganingizga ishonchigingiz kom qiling.' });
+    }
+  } catch (e) {
+    console.error('send-code error:', e);
+    res.status(500).json({ error: 'Server xatosi' });
   }
 });
 
