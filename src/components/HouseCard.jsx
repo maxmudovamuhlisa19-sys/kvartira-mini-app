@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { haptic } from '../telegram';
-import { MapPin, BedDouble, Maximize } from 'lucide-react';
+import { MapPin } from 'lucide-react';
 
 const FALLBACK_IMG = 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800';
 
@@ -16,49 +16,25 @@ export default function HouseCard({ house }) {
     <Link
       to={`/house/${house.id}`}
       onClick={() => haptic('light')}
-      className="block bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100"
+      className="flex bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100"
     >
-      {/* Image */}
-      <div className="relative">
-        <img
-          src={images[0]}
-          alt={house.title}
-          className="w-full h-52 object-cover"
-          loading="lazy"
-        />
-        <div className={`absolute top-3 left-3 px-3 py-1.5 rounded-lg text-xs font-bold
-          ${house.type === 'sotish' ? 'bg-amber-500 text-white' : 'bg-orange-500 text-white'}`}>
-          {house.type === 'sotish' ? 'Sotish' : 'Ijara'}
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className="p-5">
-        <h3 className="text-lg font-bold text-gray-900 leading-snug mb-2">{house.title}</h3>
-
-        <div className="flex items-center gap-1.5 mb-4">
-          <MapPin size={15} className="text-amber-500 flex-shrink-0" />
-          <span className="text-sm text-gray-500">{house.address}</span>
-        </div>
-
-        {/* Specs */}
-        <div className="flex items-center gap-5 mb-4">
-          <div className="flex items-center gap-2">
-            <BedDouble size={18} className="text-gray-400" />
-            <span className="text-sm font-medium text-gray-700">{house.rooms} xona</span>
+      <img
+        src={images[0]}
+        alt={house.title}
+        className="w-24 h-24 object-cover flex-shrink-0"
+        loading="lazy"
+      />
+      <div className="flex-1 p-3 min-w-0 flex flex-col justify-between">
+        <div>
+          <h3 className="text-sm font-semibold text-gray-900 truncate leading-tight">{house.title}</h3>
+          <div className="flex items-center gap-1 mt-1">
+            <MapPin size={11} className="text-amber-500 flex-shrink-0" />
+            <span className="text-[11px] text-gray-400 truncate">{house.address}</span>
           </div>
-          <div className="flex items-center gap-2">
-            <Maximize size={18} className="text-gray-400" />
-            <span className="text-sm font-medium text-gray-700">{house.area} m²</span>
-          </div>
-          {house.floor && (
-            <span className="text-sm text-gray-400">{house.floor}/{house.totalFloors}-qavat</span>
-          )}
         </div>
-
-        {/* Price */}
-        <div className="pt-3 border-t border-gray-100">
-          <span className="text-xl font-extrabold text-amber-600">{priceText}</span>
+        <div className="flex items-center justify-between mt-1.5">
+          <span className="text-sm font-bold text-amber-600">{priceText}</span>
+          <span className="text-[10px] text-gray-400">{house.rooms} xona</span>
         </div>
       </div>
     </Link>

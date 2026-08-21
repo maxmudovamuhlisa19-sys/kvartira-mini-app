@@ -69,7 +69,7 @@ export default function Home() {
             Barchasi →
           </Link>
         </div>
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-3">
           {featuredHouses.map(house => (
             <HouseCard key={house.id} house={house} />
           ))}
