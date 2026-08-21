@@ -109,11 +109,17 @@ export function AuthProvider({ children }) {
   };
 
   const register = async (name, email, phone, password, role = 'boshqa') => {
+    let telegramId = '';
+    try {
+      if (window.Telegram?.WebApp?.initDataUnsafe?.user?.id) {
+        telegramId = String(window.Telegram.WebApp.initDataUnsafe.user.id);
+      }
+    } catch {}
     try {
       const res = await fetch(`${API}/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, phone, password, role }),
+        body: JSON.stringify({ name, email, phone, password, role, telegramId }),
       });
       const data = await res.json();
       if (res.ok && data.success) {

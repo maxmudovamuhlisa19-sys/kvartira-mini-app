@@ -60,7 +60,7 @@ app.post('/api/upload', upload.array('images', 10), (req, res) => {
 // ---------- AUTH API ----------
 
 app.post('/api/register', (req, res) => {
-  const { name, phone, email, password, role } = req.body || {};
+  const { name, phone, email, password, role, telegramId } = req.body || {};
   if (!name || !email || !password) {
     return res.status(400).json({ error: "Ism, email va parol kiritilishi shart" });
   }
@@ -73,7 +73,8 @@ app.post('/api/register', (req, res) => {
     phone: phone || '',
     email,
     password,
-    role: role || 'boshqa'
+    role: role || 'boshqa',
+    telegramId: telegramId || '',
   });
   const safe = { id: user.id, name: user.name, phone: user.phone, email: user.email, role: user.role };
   res.json({ success: true, user: safe });

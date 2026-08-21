@@ -6,7 +6,7 @@ import { haptic, isTelegram } from '../telegram';
 
 export default function Register() {
   const navigate = useNavigate();
-  const { register, tgLogin } = useAuth();
+  const { register } = useAuth();
   const [form, setForm] = useState({ name: '', email: '', phone: '', password: '', confirmPassword: '', role: '' });
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState('');
@@ -40,7 +40,6 @@ export default function Register() {
     if (inTg) {
       const result = await register(form.name, form.email, form.phone, form.password, form.role);
       if (result.success) {
-        await tgLogin();
         navigate('/', { replace: true });
       } else {
         setError(result.error);
