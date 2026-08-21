@@ -153,7 +153,7 @@ export default function Houses() {
 
         {/* Natijalar */}
         {results.length > 0 ? (
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-2">
             {results.map(house => (
               <HouseCard key={house.id} house={house} />
             ))}
