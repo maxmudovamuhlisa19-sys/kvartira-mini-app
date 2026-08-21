@@ -23,7 +23,7 @@ export default function Layout({ children }) {
       style={inTg ? { background: 'var(--tg-bg, #f8fafc)' } : {}}
     >
       <TopBar />
-      <main className="pb-16">
+      <main className="pb-20">
         {children}
       </main>
       <BottomNav />
