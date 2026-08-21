@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import TopBar from './TopBar';
+import BottomNav from './BottomNav';
 import { initTelegram, isTelegram } from '../telegram';
 
 export default function Layout({ children }) {
@@ -22,9 +23,10 @@ export default function Layout({ children }) {
       style={inTg ? { background: 'var(--tg-bg, #f8fafc)' } : {}}
     >
       <TopBar />
-      <main className="pb-4">
+      <main className="pb-16">
         {children}
       </main>
+      <BottomNav />
     </div>
   );
 }
