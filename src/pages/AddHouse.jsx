@@ -17,7 +17,7 @@ export default function AddHouse() {
   const [form, setForm] = useState({
     title: '',
     address: '',
-    city: '',
+    city: 'Navoiy',
     price: '',
     rooms: '',
     area: '',
