@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import { tg, isTelegram } from '../telegram';
 
 const AuthContext = createContext(null);
@@ -13,9 +13,7 @@ export function AuthProvider({ children }) {
     } catch { return null; }
   });
   const [tgLoading, setTgLoading] = useState(false);
-  const tgLoginAttempted = useRef(false);
 
-  // Foydalanuvchini localStorage ga saqlash
   useEffect(() => {
     if (user) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
@@ -24,45 +22,63 @@ export function AuthProvider({ children }) {
     }
   }, [user]);
 
-  // Telegram Mini App ichida avtomatik login
+  // Telegram avtomatik kirish
   useEffect(() => {
     if (!isTelegram()) return;
     if (user) return;
-    if (tgLoginAttempted.current) return;
-    tgLoginAttempted.current = true;
 
-    const app = tg();
-    if (!app?.initData) return;
-    app.ready();
-    app.expand();
+    const tryAutoLogin = async () => {
+      const app = tg();
+      if (!app) return;
 
-    fetch(`${API}/telegram-auth`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ initData: app.initData }),
-    })
-      .then(r => r.json())
-      .then(data => {
-        if (data.success) setUser(data.user);
-      })
-      .catch(() => {});
+      try {
+        app.ready();
+        app.expand();
+      } catch {}
+
+      const initData = app?.initData;
+      if (!initData) return;
+
+      try {
+        const res = await fetch(`${API}/telegram-auth`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ initData }),
+        });
+        const data = await res.json();
+        if (data.success && data.user) {
+          setUser(data.user);
+        }
+      } catch {}
+    };
+
+    tryAutoLogin();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  /** Qo'lda Telegram orqali kirish (Login sahifasidan) */
   const tgLogin = async () => {
     const app = tg();
-    if (!app?.initData) {
-      return { success: false, error: 'Telegram ichida ochilmagan' };
+    if (!app) {
+      return { success: false, error: 'Telegram mavjud emas' };
     }
+
     setTgLoading(true);
     try {
+      app.ready();
+
+      const initData = app.initData;
+      if (!initData) {
+        setTgLoading(false);
+        return { success: false, error: 'Telegram ma\'lumotlari topilmadi. Qayta oching.' };
+      }
+
       const res = await fetch(`${API}/telegram-auth`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ initData: app.initData }),
+        body: JSON.stringify({ initData }),
       });
       const data = await res.json();
-      if (res.ok && data.success) {
+
+      if (res.ok && data.success && data.user) {
         setUser(data.user);
         return { success: true };
       }
@@ -74,8 +90,6 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const getTelegramInitData = () => tg()?.initData ?? null;
-
   const login = async (email, password) => {
     try {
       const res = await fetch(`${API}/login`, {
@@ -84,7 +98,10 @@ export function AuthProvider({ children }) {
         body: JSON.stringify({ email, password }),
       });
       const data = await res.json();
-      if (res.ok && data.success) { setUser(data.user); return { success: true }; }
+      if (res.ok && data.success) {
+        setUser(data.user);
+        return { success: true };
+      }
       return { success: false, error: data.error || "Email yoki parol noto'g'ri" };
     } catch {
       return { success: false, error: "Server bilan bog'lanib bo'lmadi" };
@@ -99,7 +116,10 @@ export function AuthProvider({ children }) {
         body: JSON.stringify({ name, email, phone, password, role }),
       });
       const data = await res.json();
-      if (res.ok && data.success) { setUser(data.user); return { success: true }; }
+      if (res.ok && data.success) {
+        setUser(data.user);
+        return { success: true };
+      }
       return { success: false, error: data.error || "Ro'yxatdan o'tib bo'lmadi" };
     } catch {
       return { success: false, error: "Server bilan bog'lanib bo'lmadi" };
@@ -114,7 +134,7 @@ export function AuthProvider({ children }) {
     <AuthContext.Provider value={{
       user, tgLoading,
       login, register, logout, updateProfile,
-      tgLogin, getTelegramInitData,
+      tgLogin,
     }}>
       {children}
     </AuthContext.Provider>

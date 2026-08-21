@@ -43,18 +43,18 @@ export default function Login() {
 
   return (
     <div className="px-4 pt-6 pb-6">
-      {/* Demo kirish — eng yuqorida */}
+      {/* Demo kirish */}
       <button
         type="button"
         onClick={fillDemo}
-        className="w-full flex items-center justify-center gap-2 bg-amber-500 text-white py-3.5 rounded-2xl font-bold text-sm active:bg-amber-600 transition-colors mb-4"
+        className="w-full flex items-center justify-center gap-2 bg-amber-500 text-white py-3.5 rounded-2xl font-bold text-sm active:bg-amber-600 transition-colors mb-3"
       >
         Demo kirish
       </button>
 
       {/* Telegram kirish */}
       {inTg && (
-        <div className="mb-4">
+        <>
           <button
             type="button"
             onClick={handleTgLogin}
@@ -73,16 +73,17 @@ export default function Login() {
             <span className="text-xs text-gray-400 font-medium">yoki email bilan</span>
             <div className="flex-1 h-px bg-gray-200" />
           </div>
-        </div>
+        </>
       )}
 
-      {/* Xato xabari */}
+      {/* Xato */}
       {error && (
         <div className="bg-red-50 text-red-600 px-4 py-3 rounded-xl mb-4 text-sm font-medium">
           {error}
         </div>
       )}
 
+      {/* Email / Parol */}
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block text-xs font-semibold text-gray-600 mb-1.5">Email</label>
