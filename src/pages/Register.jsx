@@ -1,14 +1,14 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { User, Mail, Phone, Lock, Eye, EyeOff, ShieldCheck, Send } from 'lucide-react';
+import { User, Mail, Phone, Lock, Eye, EyeOff, ShieldCheck, Send, Home, Search } from 'lucide-react';
 import { haptic, isTelegram, tgAlert } from '../telegram';
 
 export default function Register() {
   const navigate = useNavigate();
   const { register } = useAuth();
   const [step, setStep] = useState(1); // 1 = form, 2 = verify code
-  const [form, setForm] = useState({ name: '', email: '', phone: '', password: '', confirmPassword: '' });
+  const [form, setForm] = useState({ name: '', email: '', phone: '', password: '', confirmPassword: '', role: '' });
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -138,7 +138,7 @@ export default function Register() {
   const doRegister = async () => {
     setLoading(true);
     haptic('medium');
-    const result = await register(form.name, form.email, form.phone, form.password);
+    const result = await register(form.name, form.email, form.phone, form.password, form.role);
     setLoading(false);
     if (result.success) navigate('/', { replace: true });
     else setError(result.error);
@@ -150,6 +150,10 @@ export default function Register() {
 
     if (!form.name || !form.email || !form.phone || !form.password) {
       setError("Barcha maydonlarni to'ldiring");
+      return;
+    }
+    if (!form.role) {
+      setError("O'zingizni tanlang — ijarachimi yoki uy egasimi?");
       return;
     }
     if (form.password.length < 6) {
@@ -169,7 +173,7 @@ export default function Register() {
       // Outside Telegram, register directly
       setLoading(true);
       haptic('medium');
-      const result = await register(form.name, form.email, form.phone, form.password);
+      const result = await register(form.name, form.email, form.phone, form.password, form.role);
       setLoading(false);
       if (result.success) navigate('/', { replace: true });
       else setError(result.error);
@@ -276,6 +280,37 @@ export default function Register() {
             </div>
           </div>
         ))}
+
+        {/* Rol tanlash */}
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 mb-2">Siz kimsiz?</label>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => { haptic('light'); setForm(f => ({ ...f, role: 'ijarachi' })); }}
+              className={`flex flex-col items-center gap-2 py-4 rounded-xl border-2 transition-all
+                ${form.role === 'ijarachi'
+                  ? 'border-amber-400 bg-amber-50 text-amber-700'
+                  : 'border-gray-200 bg-white text-gray-500 active:bg-gray-50'}`}
+            >
+              <Search size={22} />
+              <span className="text-xs font-bold">Ijarachi</span>
+              <span className="text-[10px] opacity-60">Uy qidiraman</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => { haptic('light'); setForm(f => ({ ...f, role: 'sotuvchi' })); }}
+              className={`flex flex-col items-center gap-2 py-4 rounded-xl border-2 transition-all
+                ${form.role === 'sotuvchi'
+                  ? 'border-amber-400 bg-amber-50 text-amber-700'
+                  : 'border-gray-200 bg-white text-gray-500 active:bg-gray-50'}`}
+            >
+              <Home size={22} />
+              <span className="text-xs font-bold">Uy egasi</span>
+              <span className="text-[10px] opacity-60">Uyni joylayman</span>
+            </button>
+          </div>
+        </div>
 
         {/* Parol */}
         <div>
