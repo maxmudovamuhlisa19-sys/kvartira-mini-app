@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useHouses } from '../context/HouseContext';
 import { useAuth } from '../context/AuthContext';
 import { cities } from '../data/houses';
-import { Camera, X } from 'lucide-react';
+import { Camera, X, MapPin, Navigation, Loader } from 'lucide-react';
 import { haptic, tgAlert } from '../telegram';
 
 const MAX_IMAGES = 10;
@@ -23,12 +23,15 @@ export default function AddHouse() {
     type: 'sotish',
     description: '',
     phone: user?.phone || '',
+    lat: '',
+    lng: '',
   });
 
   const [images, setImages] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
+  const [locLoading, setLocLoading] = useState(false);
 
   const validate = () => {
     const e = {};
@@ -43,6 +46,30 @@ export default function AddHouse() {
   const handleChange = (key, value) => {
     setForm(f => ({ ...f, [key]: value }));
     if (errors[key]) setErrors(e => ({ ...e, [key]: '' }));
+  };
+
+  const handleGetLocation = () => {
+    haptic('medium');
+    setLocLoading(true);
+    if (!navigator.geolocation) {
+      tgAlert("Geolocation qo'llab-quvvatlanmaydi");
+      setLocLoading(false);
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = pos.coords.latitude.toFixed(6);
+        const lng = pos.coords.longitude.toFixed(6);
+        setForm(f => ({ ...f, lat, lng }));
+        setLocLoading(false);
+        haptic('success');
+      },
+      () => {
+        tgAlert("Joylashuv olish mumkin bo'lmadi. Ruxsat bering.");
+        setLocLoading(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
   };
 
   const handleFileSelect = async (e) => {
@@ -200,6 +227,44 @@ export default function AddHouse() {
             onChange={e => handleChange('address', e.target.value)}
             placeholder="Ko'cha, uy raqami"
             className={inp('address')} />
+        </div>
+
+        {/* Lokatsiya */}
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 mb-1.5">Lokatsiya</label>
+          {form.lat && form.lng ? (
+            <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-xl px-3 py-2.5">
+              <MapPin size={16} className="text-green-600 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-green-700 font-medium">
+                  {form.lat}, {form.lng}
+                </p>
+                <a
+                  href={`https://www.google.com/maps?q=${form.lat},${form.lng}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[10px] text-green-600 underline"
+                >
+                  Xaritada ko'rish
+                </a>
+              </div>
+              <button type="button" onClick={() => setForm(f => ({ ...f, lat: '', lng: '' }))}
+                className="text-green-500 text-xs p-1">
+                <X size={14} />
+              </button>
+            </div>
+          ) : (
+            <button type="button" onClick={handleGetLocation}
+              disabled={locLoading}
+              className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-amber-300 bg-amber-50 text-amber-600 rounded-xl text-sm font-medium active:bg-amber-100 transition-colors">
+              {locLoading ? (
+                <Loader size={16} className="animate-spin" />
+              ) : (
+                <Navigation size={16} />
+              )}
+              {locLoading ? 'Joylashuv olinmoqda...' : 'Hozirgi joylashuvni olish'}
+            </button>
+          )}
         </div>
 
         {/* Narx, Xona */}

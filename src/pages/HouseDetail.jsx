@@ -38,9 +38,11 @@ export default function HouseDetail() {
   const p = Number(house.price) || 0;
   const priceText = house.type === 'ijara' ? `${p.toLocaleString()} so'm/oy` : `${p.toLocaleString()} so'm`;
 
-  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-    `${house.address || ''}, ${house.city || ''}, Uzbekistan`
-  )}`;
+  const mapsUrl = house.lat && house.lng
+    ? `https://www.google.com/maps?q=${house.lat},${house.lng}`
+    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+        `${house.address || ''}, ${house.city || ''}, Uzbekistan`
+      )}`;
 
   const handleDelete = () => {
     haptic('warning');

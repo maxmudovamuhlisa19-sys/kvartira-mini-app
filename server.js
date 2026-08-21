@@ -174,7 +174,7 @@ app.get('/api/houses', (req, res) => {
 });
 
 app.post('/api/houses', (req, res) => {
-  const { title, city, address, price, rooms, type, description, phone, userId } = req.body || {};
+  const { title, city, address, price, rooms, type, description, phone, userId, lat, lng } = req.body || {};
   if (!title || !city || !price || !rooms || !type) {
     return res.status(400).json({ error: "Kerakli maydonlar to'ldirilmagan" });
   }
@@ -188,6 +188,8 @@ app.post('/api/houses', (req, res) => {
     type,
     description: description || '',
     phone: phone || '',
+    lat: lat || '',
+    lng: lng || '',
     ownerId: userId,
     owner: userId ? (findUserById(userId)?.name || 'Foydalanuvchi') : 'Foydalanuvchi'
   });
