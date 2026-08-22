@@ -403,6 +403,8 @@ async function setupMenuButton() {
 bot.launch().then(() => {
   console.log('✅ Hamroh Telegram bot ishga tushdi!');
   setupMenuButton();
+}).catch(e => {
+  console.error('⚠️ Bot xatosi:', e.message);
 });
 
 process.once('SIGINT', () => bot.stop('SIGINT'));

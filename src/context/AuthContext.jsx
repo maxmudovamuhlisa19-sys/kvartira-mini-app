@@ -40,11 +40,15 @@ export function AuthProvider({ children }) {
       if (!initData) return;
 
       try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 5000);
         const res = await fetch(`${API}/telegram-auth`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ initData }),
+          signal: controller.signal,
         });
+        clearTimeout(timeout);
         const data = await res.json();
         if (data.success && data.user) {
           setUser(data.user);
