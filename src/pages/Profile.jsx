@@ -6,9 +6,6 @@ import { User, Phone, Edit, Save, Home, Eye, Trash2, LogOut, Plus, ShieldCheck }
 import { haptic, isTelegram, tgConfirm, getTelegramUser } from '../telegram';
 import { BOT_TOKEN } from '../config';
 
-const CODE_KEY = 'hamroh_verify_code';
-const CODE_EXP_KEY = 'hamroh_verify_exp';
-
 export default function Profile() {
   const navigate = useNavigate();
   const { user, updateProfile, logout } = useAuth();
@@ -26,6 +23,8 @@ export default function Profile() {
   const [resendTimer, setResendTimer] = useState(0);
   const [verifyError, setVerifyError] = useState('');
   const [verifySuccess, setVerifySuccess] = useState(false);
+  const pendingCode = useRef(null);
+  const pendingExp = useRef(0);
 
   useEffect(() => {
     if (resendTimer <= 0) return;
@@ -74,18 +73,17 @@ export default function Profile() {
     }
     setCodeLoading(true);
     setVerifyError('');
-    try {
-      const generated = String(Math.floor(100000 + Math.random() * 900000));
-      sessionStorage.setItem(CODE_KEY, generated);
-      sessionStorage.setItem(CODE_EXP_KEY, String(Date.now() + 300000));
+    const generated = String(Math.floor(100000 + Math.random() * 900000));
+    pendingCode.current = generated;
+    pendingExp.current = Date.now() + 300000;
 
+    try {
       const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           chat_id: tgId,
-          text: `🔐 <b>Hamroh tasdiqlash</b>\n\nKodingiz: <code>${generated}</code>\n5 daqiqa amal qiladi.`,
-          parse_mode: 'HTML',
+          text: `🔐 Hamroh tasdiqlash\n\nKodingiz: ${generated}\n5 daqiqa amal qiladi.`,
         }),
       });
 
@@ -96,9 +94,11 @@ export default function Profile() {
         setTimeout(() => codeRefs[0].current?.focus(), 100);
       } else {
         setVerifyError('Kod yuborib bo\'lmadi. Botni start bosing.');
+        pendingCode.current = null;
       }
     } catch {
-      setVerifyError('Xatolik yuz berdi');
+      setVerifyError('Kod yuborib bo\'lmadi. Internetni tekshiring.');
+      pendingCode.current = null;
     } finally {
       setCodeLoading(false);
     }
@@ -125,33 +125,38 @@ export default function Profile() {
     setCodeLoading(true);
     setVerifyError('');
 
-    const saved = sessionStorage.getItem(CODE_KEY);
-    const exp = Number(sessionStorage.getItem(CODE_EXP_KEY) || 0);
+    try {
+      const saved = pendingCode.current;
+      const exp = pendingExp.current;
 
-    if (!saved || Date.now() > exp) {
-      setVerifyError('Kod muddati tugadi. Qaytadan yuboring.');
-      setCodeLoading(false);
+      if (!saved || Date.now() > exp) {
+        setVerifyError('Kod muddati tugadi. Qaytadan yuboring.');
+        setCodeLoading(false);
+        setCode(['', '', '', '', '', '']);
+        codeRefs[0].current?.focus();
+        return;
+      }
+
+      if (saved !== codeStr) {
+        setVerifyError('Noto\'g\'ri kod');
+        setCodeLoading(false);
+        setCode(['', '', '', '', '', '']);
+        codeRefs[0].current?.focus();
+        return;
+      }
+
+      haptic('success');
+      updateProfile({ phoneVerified: true });
+      setVerifySuccess(true);
+      setVerifyStep(0);
       setCode(['', '', '', '', '', '']);
-      codeRefs[0].current?.focus();
-      return;
-    }
-
-    if (saved !== codeStr) {
-      setVerifyError('Noto\'g\'ri kod');
+      pendingCode.current = null;
+      pendingExp.current = 0;
+    } catch {
+      setVerifyError('Tekshirishda xatolik');
+    } finally {
       setCodeLoading(false);
-      setCode(['', '', '', '', '', '']);
-      codeRefs[0].current?.focus();
-      return;
     }
-
-    haptic('success');
-    updateProfile({ phoneVerified: true });
-    setVerifySuccess(true);
-    setVerifyStep(0);
-    setCode(['', '', '', '', '', '']);
-    sessionStorage.removeItem(CODE_KEY);
-    sessionStorage.removeItem(CODE_EXP_KEY);
-    setCodeLoading(false);
   };
 
   return (
