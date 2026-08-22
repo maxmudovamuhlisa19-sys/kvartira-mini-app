@@ -18,7 +18,13 @@ export default function Profile() {
 
   const [verifyStep, setVerifyStep] = useState(0);
   const [code, setCode] = useState(['', '', '', '', '', '']);
-  const codeRefs = [useRef(), useRef(), useRef(), useRef(), useRef(), useRef()];
+  const codeRef0 = useRef(null);
+  const codeRef1 = useRef(null);
+  const codeRef2 = useRef(null);
+  const codeRef3 = useRef(null);
+  const codeRef4 = useRef(null);
+  const codeRef5 = useRef(null);
+  const codeRefs = [codeRef0, codeRef1, codeRef2, codeRef3, codeRef4, codeRef5];
   const [codeLoading, setCodeLoading] = useState(false);
   const [resendTimer, setResendTimer] = useState(0);
   const [verifyError, setVerifyError] = useState('');
