@@ -214,6 +214,70 @@ app.get('/api/users', (req, res) => {
   res.json(getUsers().map(u => ({ id: u.id, name: u.name, email: u.email, phone: u.phone, role: u.role })));
 });
 
+// ---------- TELEGRAM PHONE VERIFY ----------
+
+const phoneCodes = new Map();
+
+function genCode() {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+async function tgSend(chatId, text) {
+  const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML' }),
+  });
+  return res.ok;
+}
+
+app.post('/api/send-code', async (req, res) => {
+  try {
+    const { telegramId } = req.body || {};
+    if (!telegramId) return res.status(400).json({ error: 'Telegram ID topilmadi' });
+
+    const code = genCode();
+    phoneCodes.set(String(telegramId), { code, expires: Date.now() + 300000 });
+
+    const sent = await tgSend(telegramId,
+      `🔐 <b>Hamroh tasdiqlash</b>\n\nKodingiz: <code>${code}</code>\n5 daqiqa amal qiladi.`
+    );
+
+    if (sent) res.json({ success: true });
+    else {
+      phoneCodes.delete(String(telegramId));
+      res.status(400).json({ error: 'Kod yuborib bo\'lmadi. Botni start bosing.' });
+    }
+  } catch (e) {
+    console.error('send-code:', e.message);
+    res.status(500).json({ error: 'Server xatosi' });
+  }
+});
+
+app.post('/api/verify-code', (req, res) => {
+  try {
+    const { telegramId, code } = req.body || {};
+    if (!telegramId || !code) return res.status(400).json({ error: 'Ma\'lumotlar yetarli emas' });
+
+    const pending = phoneCodes.get(String(telegramId));
+    if (!pending) return res.status(400).json({ error: 'Kod topilmadi' });
+    if (Date.now() > pending.expires) {
+      phoneCodes.delete(String(telegramId));
+      return res.status(400).json({ error: 'Kod muddati tugadi' });
+    }
+    if (pending.code !== String(code).trim()) {
+      return res.status(400).json({ error: 'Noto\'g\'ri kod' });
+    }
+
+    phoneCodes.delete(String(telegramId));
+    res.json({ success: true, verified: true });
+  } catch (e) {
+    console.error('verify-code:', e.message);
+    res.status(500).json({ error: 'Server xatosi' });
+  }
+});
+
 // ---------- STATIC SITE ----------
 
 const distPath = path.join(__dirname, 'dist');

@@ -47,7 +47,7 @@ export default function Houses() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="bg-gray-50">
       <div className="px-3 pt-2 pb-4">
         {/* Search + filter */}
         <div className="flex gap-1.5 mb-2">

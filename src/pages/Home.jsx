@@ -11,7 +11,7 @@ export default function Home() {
   const featuredHouses = houses.slice(0, 6);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="bg-gray-50">
       {/* Hero */}
       <div className="bg-gradient-to-br from-amber-500 via-amber-600 to-orange-500 px-4 pt-4 pb-5">
         <h1 className="text-white text-lg font-extrabold mb-3">Hamroh</h1>

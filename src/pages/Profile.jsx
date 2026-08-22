@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useHouses } from '../context/HouseContext';
-import { User, Mail, Phone, Edit, Save, Home, Eye, Trash2, LogOut, Plus } from 'lucide-react';
+import { User, Mail, Phone, Edit, Save, Home, Eye, Trash2, LogOut, Plus, ShieldCheck } from 'lucide-react';
 import { haptic, isTelegram, tgConfirm, getTelegramUser } from '../telegram';
 
 export default function Profile() {
@@ -17,6 +17,19 @@ export default function Profile() {
   });
   const inTg = isTelegram();
   const tgUser = getTelegramUser();
+
+  const [verifyStep, setVerifyStep] = useState(0); // 0=off, 1=code sent, 2=code input
+  const [code, setCode] = useState(['', '', '', '', '', '']);
+  const codeRefs = [useRef(), useRef(), useRef(), useRef(), useRef(), useRef()];
+  const [codeLoading, setCodeLoading] = useState(false);
+  const [resendTimer, setResendTimer] = useState(0);
+  const [verifyError, setVerifyError] = useState('');
+
+  useEffect(() => {
+    if (resendTimer <= 0) return;
+    const t = setTimeout(() => setResendTimer(resendTimer - 1), 1000);
+    return () => clearTimeout(t);
+  }, [resendTimer]);
 
   if (!user) {
     navigate('/login', { replace: true });
@@ -45,6 +58,82 @@ export default function Profile() {
     haptic('medium');
     logout();
     navigate('/', { replace: true });
+  };
+
+  const handleSendCode = async () => {
+    const tgId = tgUser?.id || window.Telegram?.WebApp?.initDataUnsafe?.user?.id;
+    if (!tgId) {
+      setVerifyError("Telegram aniqlanmadi");
+      return;
+    }
+    setCodeLoading(true);
+    setVerifyError('');
+    try {
+      const res = await fetch('/api/send-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ telegramId: String(tgId) }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setVerifyStep(2);
+        setResendTimer(60);
+        haptic('success');
+        setTimeout(() => codeRefs[0].current?.focus(), 100);
+      } else {
+        setVerifyError(data.error || 'Kod yuborib bo\'lmadi');
+      }
+    } catch {
+      setVerifyError('Server bilan bog\'lanib bo\'lmadi');
+    } finally {
+      setCodeLoading(false);
+    }
+  };
+
+  const handleCodeChange = (index, value) => {
+    if (!/^\d*$/.test(value)) return;
+    const newCode = [...code];
+    newCode[index] = value.slice(-1);
+    setCode(newCode);
+    if (value && index < 5) codeRefs[index + 1].current?.focus();
+    if (value && index === 5 && newCode.join('').length === 6) {
+      verifyPhone(newCode.join(''));
+    }
+  };
+
+  const handleCodeKeyDown = (index, e) => {
+    if (e.key === 'Backspace' && !code[index] && index > 0) {
+      codeRefs[index - 1].current?.focus();
+    }
+  };
+
+  const verifyPhone = async (codeStr) => {
+    const tgId = tgUser?.id || window.Telegram?.WebApp?.initDataUnsafe?.user?.id;
+    if (!tgId) return;
+    setCodeLoading(true);
+    setVerifyError('');
+    try {
+      const res = await fetch('/api/verify-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ telegramId: String(tgId), code: codeStr }),
+      });
+      const data = await res.json();
+      if (data.verified) {
+        haptic('success');
+        updateProfile({ phone: tgUser?.phone_number || user.phone || 'Tasdiqlangan' });
+        setVerifyStep(0);
+        setCode(['', '', '', '', '', '']);
+      } else {
+        setVerifyError(data.error || 'Kod noto\'g\'ri');
+        setCode(['', '', '', '', '', '']);
+        codeRefs[0].current?.focus();
+      }
+    } catch {
+      setVerifyError('Server bilan bog\'lanib bo\'lmadi');
+    } finally {
+      setCodeLoading(false);
+    }
   };
 
   const formatPrice = (price, type) => {
@@ -80,7 +169,6 @@ export default function Profile() {
             )}
           </div>
         </div>
-        {/* Stats */}
         <div className="grid grid-cols-3 gap-2 mt-4">
           {[
             { label: "E'lonlar", value: myHouses.length },
@@ -94,6 +182,59 @@ export default function Profile() {
           ))}
         </div>
       </div>
+
+      {/* Telefon tasdiqlash (faqat Telegram'da) */}
+      {inTg && !user.phoneVerified && (
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-50">
+            <ShieldCheck size={18} className="text-amber-500" />
+            <span className="text-sm font-bold text-gray-900">Telefonni tasdiqlash</span>
+          </div>
+          <div className="p-4">
+            {verifyStep === 2 ? (
+              <div>
+                <p className="text-xs text-gray-500 mb-3">Telegramga yuborilgan 6 xonali kodni kiriting</p>
+                {verifyError && <p className="text-red-500 text-xs mb-2">{verifyError}</p>}
+                <div className="flex justify-center gap-1.5 mb-3">
+                  {code.map((digit, i) => (
+                    <input key={i} ref={codeRefs[i]} type="text" inputMode="numeric" maxLength={1}
+                      value={digit}
+                      onChange={(e) => handleCodeChange(i, e.target.value)}
+                      onKeyDown={(e) => handleCodeKeyDown(i, e)}
+                      className="w-10 h-11 text-center text-base font-bold bg-gray-50 border-2 rounded-lg outline-none transition-all
+                        focus:border-amber-400 focus:ring-2 focus:ring-amber-100
+                        border-gray-200"
+                    />
+                  ))}
+                </div>
+                <button onClick={() => { setCode(['','','','','','']); codeRefs[0].current?.focus(); }}
+                  disabled={resendTimer > 0}
+                  className="w-full text-center text-xs text-amber-600 font-medium py-1 disabled:text-gray-400">
+                  {resendTimer > 0 ? `Qayta yuborish: ${resendTimer}s` : 'Kodni qayta yuborish'}
+                </button>
+                <button onClick={() => { setVerifyStep(0); setVerifyError(''); setCode(['','','','','','']); }}
+                  className="w-full text-center text-xs text-gray-500 font-medium py-1">
+                  ← Orqaga
+                </button>
+              </div>
+            ) : (
+              <div className="text-center">
+                <p className="text-xs text-gray-500 mb-3">Telegram raqamingizni tasdiqlang</p>
+                {verifyError && <p className="text-red-500 text-xs mb-2">{verifyError}</p>}
+                <button onClick={handleSendCode} disabled={codeLoading}
+                  className="w-full py-3 bg-amber-500 text-white rounded-xl font-semibold text-sm flex items-center justify-center gap-2 active:bg-amber-600 disabled:bg-gray-300">
+                  {codeLoading ? (
+                    <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <ShieldCheck size={16} />
+                  )}
+                  {codeLoading ? 'Yuborilmoqda...' : 'Telegramga kod olish'}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Ma'lumotlar */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
