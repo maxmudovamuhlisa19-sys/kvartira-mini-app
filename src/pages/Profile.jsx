@@ -2,32 +2,34 @@ import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useHouses } from '../context/HouseContext';
-import { User, Mail, Phone, Edit, Save, Home, Eye, Trash2, LogOut, Plus, ShieldCheck } from 'lucide-react';
+import { User, Phone, Edit, Save, Home, Eye, Trash2, LogOut, Plus, ShieldCheck } from 'lucide-react';
 import { haptic, isTelegram, tgConfirm, getTelegramUser } from '../telegram';
+import { BOT_TOKEN } from '../config';
+
+const CODE_KEY = 'hamroh_verify_code';
+const CODE_EXP_KEY = 'hamroh_verify_exp';
 
 export default function Profile() {
   const navigate = useNavigate();
   const { user, updateProfile, logout } = useAuth();
   const { houses, deleteHouse } = useHouses();
   const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({
-    name: user?.name || '',
-    email: user?.email || '',
-    phone: user?.phone || '',
-  });
+  const [form, setForm] = useState({ name: user?.name || '' });
   const inTg = isTelegram();
   const tgUser = getTelegramUser();
+  const tgId = tgUser?.id || window.Telegram?.WebApp?.initDataUnsafe?.user?.id;
 
-  const [verifyStep, setVerifyStep] = useState(0); // 0=off, 1=code sent, 2=code input
+  const [verifyStep, setVerifyStep] = useState(0);
   const [code, setCode] = useState(['', '', '', '', '', '']);
   const codeRefs = [useRef(), useRef(), useRef(), useRef(), useRef(), useRef()];
   const [codeLoading, setCodeLoading] = useState(false);
   const [resendTimer, setResendTimer] = useState(0);
   const [verifyError, setVerifyError] = useState('');
+  const [verifySuccess, setVerifySuccess] = useState(false);
 
   useEffect(() => {
     if (resendTimer <= 0) return;
-    const t = setTimeout(() => setResendTimer(resendTimer - 1), 1000);
+    const t = setTimeout(() => setResendTimer(r => r - 1), 1000);
     return () => clearTimeout(t);
   }, [resendTimer]);
 
@@ -36,11 +38,16 @@ export default function Profile() {
     return null;
   }
 
+  const isTgUser = user.email?.includes('@telegram.local');
+  const displayName = user.name || tgUser?.first_name || 'Foydalanuvchi';
+  const displayUsername = tgUser?.username ? `@${tgUser.username}` : null;
+  const isPhoneVerified = user.phoneVerified || verifySuccess;
+
   const myHouses = houses.filter(h => h.userId === user.id || h.ownerId === user.id);
 
   const handleSave = () => {
     haptic('medium');
-    updateProfile(form);
+    updateProfile({ name: form.name });
     setEditing(false);
   };
 
@@ -61,7 +68,6 @@ export default function Profile() {
   };
 
   const handleSendCode = async () => {
-    const tgId = tgUser?.id || window.Telegram?.WebApp?.initDataUnsafe?.user?.id;
     if (!tgId) {
       setVerifyError("Telegram aniqlanmadi");
       return;
@@ -69,22 +75,30 @@ export default function Profile() {
     setCodeLoading(true);
     setVerifyError('');
     try {
-      const res = await fetch('/api/send-code', {
+      const generated = String(Math.floor(100000 + Math.random() * 900000));
+      sessionStorage.setItem(CODE_KEY, generated);
+      sessionStorage.setItem(CODE_EXP_KEY, String(Date.now() + 300000));
+
+      const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ telegramId: String(tgId) }),
+        body: JSON.stringify({
+          chat_id: tgId,
+          text: `🔐 <b>Hamroh tasdiqlash</b>\n\nKodingiz: <code>${generated}</code>\n5 daqiqa amal qiladi.`,
+          parse_mode: 'HTML',
+        }),
       });
-      const data = await res.json();
-      if (data.success) {
+
+      if (res.ok) {
         setVerifyStep(2);
         setResendTimer(60);
         haptic('success');
         setTimeout(() => codeRefs[0].current?.focus(), 100);
       } else {
-        setVerifyError(data.error || 'Kod yuborib bo\'lmadi');
+        setVerifyError('Kod yuborib bo\'lmadi. Botni start bosing.');
       }
     } catch {
-      setVerifyError('Server bilan bog\'lanib bo\'lmadi');
+      setVerifyError('Xatolik yuz berdi');
     } finally {
       setCodeLoading(false);
     }
@@ -97,7 +111,7 @@ export default function Profile() {
     setCode(newCode);
     if (value && index < 5) codeRefs[index + 1].current?.focus();
     if (value && index === 5 && newCode.join('').length === 6) {
-      verifyPhone(newCode.join(''));
+      verifyCode(newCode.join(''));
     }
   };
 
@@ -107,45 +121,38 @@ export default function Profile() {
     }
   };
 
-  const verifyPhone = async (codeStr) => {
-    const tgId = tgUser?.id || window.Telegram?.WebApp?.initDataUnsafe?.user?.id;
-    if (!tgId) return;
+  const verifyCode = (codeStr) => {
     setCodeLoading(true);
     setVerifyError('');
-    try {
-      const res = await fetch('/api/verify-code', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ telegramId: String(tgId), code: codeStr }),
-      });
-      const data = await res.json();
-      if (data.verified) {
-        haptic('success');
-        updateProfile({ phone: tgUser?.phone_number || user.phone || 'Tasdiqlangan' });
-        setVerifyStep(0);
-        setCode(['', '', '', '', '', '']);
-      } else {
-        setVerifyError(data.error || 'Kod noto\'g\'ri');
-        setCode(['', '', '', '', '', '']);
-        codeRefs[0].current?.focus();
-      }
-    } catch {
-      setVerifyError('Server bilan bog\'lanib bo\'lmadi');
-    } finally {
+
+    const saved = sessionStorage.getItem(CODE_KEY);
+    const exp = Number(sessionStorage.getItem(CODE_EXP_KEY) || 0);
+
+    if (!saved || Date.now() > exp) {
+      setVerifyError('Kod muddati tugadi. Qaytadan yuboring.');
       setCodeLoading(false);
+      setCode(['', '', '', '', '', '']);
+      codeRefs[0].current?.focus();
+      return;
     }
-  };
 
-  const formatPrice = (price, type) => {
-    const p = Number(price) || 0;
-    return type === 'ijara' ? `${p.toLocaleString()} so'm/oy` : `${p.toLocaleString()} so'm`;
-  };
+    if (saved !== codeStr) {
+      setVerifyError('Noto\'g\'ri kod');
+      setCodeLoading(false);
+      setCode(['', '', '', '', '', '']);
+      codeRefs[0].current?.focus();
+      return;
+    }
 
-  const infoFields = [
-    { icon: User, label: 'To\'liq ism', value: user.name },
-    { icon: Mail, label: 'Email', value: user.email },
-    { icon: Phone, label: 'Telefon', value: user.phone || '—' },
-  ];
+    haptic('success');
+    updateProfile({ phoneVerified: true });
+    setVerifySuccess(true);
+    setVerifyStep(0);
+    setCode(['', '', '', '', '', '']);
+    sessionStorage.removeItem(CODE_KEY);
+    sessionStorage.removeItem(CODE_EXP_KEY);
+    setCodeLoading(false);
+  };
 
   return (
     <div className="px-4 pt-4 pb-4 space-y-4">
@@ -156,12 +163,14 @@ export default function Profile() {
             {inTg && tgUser?.photo_url ? (
               <img src={tgUser.photo_url} alt="" className="w-full h-full rounded-2xl object-cover" />
             ) : (
-              user.name.charAt(0).toUpperCase()
+              displayName.charAt(0).toUpperCase()
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <div className="font-bold text-lg truncate">{user.name}</div>
-            <div className="text-amber-200 text-sm truncate">{user.email}</div>
+            <div className="font-bold text-lg truncate">{displayName}</div>
+            {displayUsername && (
+              <div className="text-amber-200 text-sm truncate">{displayUsername}</div>
+            )}
             {inTg && (
               <span className="inline-block bg-white/20 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full mt-1">
                 ✈️ Telegram
@@ -183,8 +192,8 @@ export default function Profile() {
         </div>
       </div>
 
-      {/* Telefon tasdiqlash (faqat Telegram'da) */}
-      {inTg && !user.phoneVerified && (
+      {/* Telefon tasdiqlash */}
+      {inTg && !isPhoneVerified && (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-50">
             <ShieldCheck size={18} className="text-amber-500" />
@@ -194,7 +203,7 @@ export default function Profile() {
             {verifyStep === 2 ? (
               <div>
                 <p className="text-xs text-gray-500 mb-3">Telegramga yuborilgan 6 xonali kodni kiriting</p>
-                {verifyError && <p className="text-red-500 text-xs mb-2">{verifyError}</p>}
+                {verifyError && <p className="text-red-500 text-xs mb-2 bg-red-50 px-3 py-2 rounded-lg">{verifyError}</p>}
                 <div className="flex justify-center gap-1.5 mb-3">
                   {code.map((digit, i) => (
                     <input key={i} ref={codeRefs[i]} type="text" inputMode="numeric" maxLength={1}
@@ -202,11 +211,11 @@ export default function Profile() {
                       onChange={(e) => handleCodeChange(i, e.target.value)}
                       onKeyDown={(e) => handleCodeKeyDown(i, e)}
                       className="w-10 h-11 text-center text-base font-bold bg-gray-50 border-2 rounded-lg outline-none transition-all
-                        focus:border-amber-400 focus:ring-2 focus:ring-amber-100
-                        border-gray-200"
+                        focus:border-amber-400 focus:ring-2 focus:ring-amber-100 border-gray-200"
                     />
                   ))}
                 </div>
+                {codeLoading && <p className="text-center text-xs text-amber-600">Tekshirilmoqda...</p>}
                 <button onClick={() => { setCode(['','','','','','']); codeRefs[0].current?.focus(); }}
                   disabled={resendTimer > 0}
                   className="w-full text-center text-xs text-amber-600 font-medium py-1 disabled:text-gray-400">
@@ -220,7 +229,7 @@ export default function Profile() {
             ) : (
               <div className="text-center">
                 <p className="text-xs text-gray-500 mb-3">Telegram raqamingizni tasdiqlang</p>
-                {verifyError && <p className="text-red-500 text-xs mb-2">{verifyError}</p>}
+                {verifyError && <p className="text-red-500 text-xs mb-2 bg-red-50 px-3 py-2 rounded-lg">{verifyError}</p>}
                 <button onClick={handleSendCode} disabled={codeLoading}
                   className="w-full py-3 bg-amber-500 text-white rounded-xl font-semibold text-sm flex items-center justify-center gap-2 active:bg-amber-600 disabled:bg-gray-300">
                   {codeLoading ? (
@@ -233,6 +242,13 @@ export default function Profile() {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {isPhoneVerified && (
+        <div className="bg-green-50 border border-green-200 rounded-2xl px-4 py-3 flex items-center gap-2">
+          <ShieldCheck size={16} className="text-green-600" />
+          <span className="text-xs font-semibold text-green-700">Telefon tasdiqlangan</span>
         </div>
       )}
 
@@ -251,21 +267,15 @@ export default function Profile() {
 
         {editing ? (
           <div className="p-4 space-y-3">
-            {[
-              { key: 'name', label: 'Ism', type: 'text', icon: User },
-              { key: 'email', label: 'Email', type: 'email', icon: Mail },
-              { key: 'phone', label: 'Telefon', type: 'tel', icon: Phone },
-            ].map(({ key, label, type, icon: Icon }) => (
-              <div key={key}>
-                <label className="block text-xs font-semibold text-gray-500 mb-1">{label}</label>
-                <div className="relative">
-                  <Icon size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input type={type} value={form[key]}
-                    onChange={e => setForm({ ...form, [key]: e.target.value })}
-                    className="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-amber-400 outline-none" />
-                </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1">Ism</label>
+              <div className="relative">
+                <User size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input type="text" value={form.name}
+                  onChange={e => setForm({ ...form, name: e.target.value })}
+                  className="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-amber-400 outline-none" />
               </div>
-            ))}
+            </div>
             <button onClick={handleSave}
               className="w-full bg-amber-500 text-white py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 active:bg-amber-600">
               <Save size={16} /> Saqlash
@@ -273,15 +283,29 @@ export default function Profile() {
           </div>
         ) : (
           <div className="divide-y divide-gray-50">
-            {infoFields.map(({ icon: Icon, label, value }) => (
-              <div key={label} className="flex items-center gap-3 px-4 py-3">
-                <Icon size={16} className="text-gray-400 flex-shrink-0" />
+            <div className="flex items-center gap-3 px-4 py-3">
+              <User size={16} className="text-gray-400 flex-shrink-0" />
+              <div>
+                <div className="text-[10px] text-gray-400">Ism</div>
+                <div className="text-sm font-medium text-gray-900">{displayName}</div>
+              </div>
+            </div>
+            {displayUsername && (
+              <div className="flex items-center gap-3 px-4 py-3">
+                <span className="text-gray-400 flex-shrink-0 text-sm">@</span>
                 <div>
-                  <div className="text-[10px] text-gray-400">{label}</div>
-                  <div className="text-sm font-medium text-gray-900">{value}</div>
+                  <div className="text-[10px] text-gray-400">Telegram</div>
+                  <div className="text-sm font-medium text-gray-900">{displayUsername}</div>
                 </div>
               </div>
-            ))}
+            )}
+            <div className="flex items-center gap-3 px-4 py-3">
+              <Phone size={16} className="text-gray-400 flex-shrink-0" />
+              <div>
+                <div className="text-[10px] text-gray-400">Telefon</div>
+                <div className="text-sm font-medium text-gray-900">{tgUser?.phone_number || user.phone || '—'}</div>
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -307,7 +331,10 @@ export default function Profile() {
                 />
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-semibold text-gray-900 truncate">{house.title}</div>
-                  <div className="text-xs text-amber-600 font-bold">{formatPrice(house.price, house.type)}</div>
+                  <div className="text-xs text-amber-600 font-bold">
+                    {Number(house.price || 0).toLocaleString()} so'm
+                    {house.type === 'ijara' ? '/oy' : ''}
+                  </div>
                 </div>
                 <div className="flex gap-1 flex-shrink-0">
                   <Link to={`/house/${house.id}`} onClick={() => haptic('light')}

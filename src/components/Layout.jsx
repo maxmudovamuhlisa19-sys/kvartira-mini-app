@@ -19,11 +19,11 @@ export default function Layout({ children }) {
 
   return (
     <div
-      className="min-h-screen bg-gray-50"
+      className="min-h-dvh bg-gray-50 overflow-y-auto"
       style={inTg ? { background: 'var(--tg-bg, #f8fafc)' } : {}}
     >
       <TopBar />
-      <main className="pb-20">
+      <main className="pb-24">
         {children}
       </main>
       <BottomNav />

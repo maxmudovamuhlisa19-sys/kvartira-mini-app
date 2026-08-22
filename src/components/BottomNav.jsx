@@ -17,11 +17,11 @@ export default function BottomNav() {
     { href: '/', icon: Home, label: 'Bosh sahifa' },
     { href: '/houses', icon: Search, label: 'Qidirish' },
     { href: user ? '/add-house' : '/login', icon: Plus, label: 'E\'lon', special: true },
-    { href: user ? '/profile' : '/login', icon: User, label: user ? user.name.split(' ')[0] : 'Kirish' },
+    { href: user ? '/profile' : '/login', icon: User, label: user ? (user.name || 'Profil') : 'Kirish' },
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-100 safe-area-bottom">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-gray-100 safe-area-bottom">
       <div className="flex items-center justify-around h-14 max-w-lg mx-auto">
         {items.map(({ href, icon: Icon, label, special }) => {
           const active = isActive(href);
